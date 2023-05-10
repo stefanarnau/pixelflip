@@ -44,12 +44,14 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
         if np.mod(block_nr + 1, 2) == 1:
             block_reliability = "reliable"
             response_flips = ["no"] * n_trials
+            procstring = "gridBlockReliableStartProc"
         else:
             block_reliability = "unreliable"
             n_noflips = np.int(np.floor(n_trials * (1 - flip_rate)))
             n_flips = n_trials - n_noflips
             response_flips = ["no"] * n_noflips + ["yes"] * n_flips
             random.shuffle(response_flips)
+            procstring = "gridBlockUnreliableStartProc"
         
         # Line for blockstart
         all_the_lines.append(
@@ -57,7 +59,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
                 [
                     1,
                     "",
-                    "gridBlockStartProc",
+                    procstring,
                     subject_id + 1,
                     1, # Block start code
                     block_nr + 1,
