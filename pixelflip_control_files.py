@@ -22,7 +22,7 @@ ids_experiment = range(100)
 
 # Set parameters
 n_blocks = 6
-n_trials = 100
+n_trials = 80
 flip_rate = 0.3
 
 # Iterate participants
@@ -32,10 +32,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
     all_the_lines = []
     
     # Get cues
-    if np.mod(subject_id, 2) == 1:
-        cues = {"hard" : "X", "easy" : "O"}
-    else:
-        cues = {"hard" : "O", "easy" : "X"}
+    cues = {"hard" : "X", "easy" : "0"}
     
     # Iterate blocks
     for block_nr in range(n_blocks):
@@ -83,9 +80,11 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
             
             # Get trial difficulty
             if trial_difficulties[trial_nr] == "easy":
-                trial_difficulty = np.random.normal(loc=0.3, scale=0.05, size=(1,))[0]
+                #trial_difficulty = np.random.normal(loc=0.3, scale=0.05, size=(1,))[0]
+                trial_difficulty = np.random.uniform(0.25, 0.32, (1,))[0]
             else:
-                trial_difficulty = np.random.normal(loc=0.45, scale=0.05, size=(1,))[0]
+                #trial_difficulty = np.random.normal(loc=0.45, scale=0.05, size=(1,))[0]
+                trial_difficulty = np.random.uniform(0.25, 0.32, (1,))[0]
                 
             # Get color proportions
             color_proportions = [trial_difficulty, 1 - trial_difficulty]
