@@ -84,7 +84,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
                 trial_difficulty = np.random.uniform(0.25, 0.32, (1,))[0]
             else:
                 #trial_difficulty = np.random.normal(loc=0.45, scale=0.05, size=(1,))[0]
-                trial_difficulty = np.random.uniform(0.25, 0.32, (1,))[0]
+                trial_difficulty = np.random.uniform(0.42, 0.49, (1,))[0]
                 
             # Get color proportions
             color_proportions = [trial_difficulty, 1 - trial_difficulty]
