@@ -7,8 +7,8 @@ PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list (stating the obvious here...)
-%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08'};
-subject_list = {'VP06', 'VP08'};
+%subject_list = {'VP01', 'VP02', 'VP03', 'VP05'};
+subject_list = {'VP02', 'VP03', 'VP05'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -288,24 +288,19 @@ for s = 1 : length(subject_list)
 
 end % End subject loop
 
-
-
-
 % Test
-% ============================================================================================================================================
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05'};
 
 % Load info
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
-% Get erp times
-erp_times = EEG.times(EEG.times >= -200 & EEG.times <= 1500);
+idx_times = EEG.times(EEG.times >= -200 & EEG.times <= 1500);
 
 % Collect data
-erp_1 = zeros(length(erp_times), 1);
-erp_2 = zeros(length(erp_times), 1);
-erp_3 = zeros(length(erp_times), 1);
-erp_4 = zeros(length(erp_times), 1);
+erp_1 = zeros(sum(idx_times), 1);
+erp_2 = zeros(sum(idx_times), 1);
+erp_3 = zeros(sum(idx_times), 1);
+erp_4 = zeros(sum(idx_times), 1);
 for s = 1 : length(subject_list)
 
     % Get id stuff
@@ -316,7 +311,7 @@ for s = 1 : length(subject_list)
     EEG = pop_loadset('filename',    [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
 
-    data_fcz = squeeze(mean(EEG.data([15, 65, 19, 20, 33, 34], EEG.times >= -200 & EEG.times <= 1500, :), 1));
+    data_fcz = squeeze(mean(EEG.data([15, 65, 19, 20, 33, 34], idx_times, :), 1));
     tinf = EEG.trialinfo;
     
     idx_easy_flip0 = EEG.trialinfo(:, 4) == 0 & ismember(EEG.trialinfo(:, 2), [1, 3, 5]);
@@ -333,7 +328,7 @@ for s = 1 : length(subject_list)
 end
 
 figure()
-plot(erp_times, [erp_1, erp_2, erp_3, erp_4], 'LineWidth', 2)
+plot(EEG.times, [erp_1, erp_2, erp_3, erp_4], 'LineWidth', 2)
 legend({'easy0', 'easy1', 'hard0', 'hard1'})
 xline([0, 1200])
 
