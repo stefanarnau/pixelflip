@@ -7,8 +7,8 @@ PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list (stating the obvious here...)
-%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08'};
-subject_list = {'VP06', 'VP08'};
+%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16'};
+subject_list = {'VP09', 'VP16'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -223,11 +223,11 @@ for s = 1 : length(subject_list)
     EEG_TF.trialinfo(EEG_TF.rejected_epochs, :) = [];
 
     % Runica & ICLabel
-    EEG_TF = pop_runica(EEG_TF, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank);
+    EEG_TF = pop_runica(EEG_TF, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank - 5);
     EEG_TF = iclabel(EEG_TF);
 
     % Find nobrainer
-    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
 
     % Copy ICs to erpset
     EEG = pop_editset(EEG, 'icachansind', 'EEG_TF.icachansind', 'icaweights', 'EEG_TF.icaweights', 'icasphere', 'EEG_TF.icasphere');
@@ -263,11 +263,11 @@ for s = 1 : length(subject_list)
     EEG_TF.trialinfo(EEG_TF.rejected_epochs, :) = [];
 
     % Runica & ICLabel
-    EEG_TF = pop_runica(EEG_TF, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank);
+    EEG_TF = pop_runica(EEG_TF, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank - 5);
     EEG_TF = iclabel(EEG_TF);
 
     % Find nobrainer
-    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
 
     % Copy ICs to erpset
     EEG = pop_editset(EEG, 'icachansind', 'EEG_TF.icachansind', 'icaweights', 'EEG_TF.icaweights', 'icasphere', 'EEG_TF.icasphere');
@@ -293,7 +293,7 @@ end % End subject loop
 
 % Test
 % ============================================================================================================================================
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11'};
 
 % Load info
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
