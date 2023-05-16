@@ -10,15 +10,13 @@ Created on Mon May  8 15:35:54 2023
 import numpy as np
 import os
 import pandas as pd
-import itertools as it
 import random
 
 # Path out
 path_out = "/home/plkn/repos/pixelflip/control_files/"
 
 # Number of ids to create files for
-ids_pilot = range(1000, 1020)
-ids_experiment = range(100)
+ids_experiment = range(64)
 
 # Set parameters
 n_blocks = 6
@@ -26,7 +24,7 @@ n_trials = 80
 flip_rate = 0.3
 
 # Iterate participants
-for subject_id in it.chain(ids_pilot, ids_experiment):
+for subject_id in ids_experiment:
     
     # Stuff goes here
     all_the_lines = []
@@ -34,17 +32,20 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
     # Get cues
     cues = {"hard" : "X", "easy" : "0"}
     
+    if (subject_id in range(16)) | (subject_id in range(32, 48)):
+        block_reliability_order = ["reliable",  "unreliable", "reliable", "unreliable", "reliable", "unreliable"]
+    else:
+        block_reliability_order = ["reliable",  "unreliable", "unreliable", "reliable", "unreliable", "reliable"]
+    
     # Iterate blocks
     for block_nr in range(n_blocks):
-        
+        block_nr
         # Get block reliability and response flip vector
-        if np.mod(block_nr + 1, 2) == 1:
-            block_reliability = "reliable"
+        if block_reliability_order[block_nr] == "reliable":
             response_flips = ["no"] * n_trials
             procstring = "gridBlockReliableStartProc"
         else:
-            block_reliability = "unreliable"
-            n_noflips = np.int(np.floor(n_trials * (1 - flip_rate)))
+            n_noflips = int(np.floor(n_trials * (1 - flip_rate)))
             n_flips = n_trials - n_noflips
             response_flips = ["no"] * n_noflips + ["yes"] * n_flips
             random.shuffle(response_flips)
@@ -60,7 +61,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
                     subject_id + 1,
                     1, # Block start code
                     block_nr + 1,
-                    block_reliability,
+                    block_reliability_order[block_nr],
                     0,
                     "",
                     "",
@@ -72,7 +73,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
         )
         
         # Get list of trial conditions
-        trial_difficulties = ["easy"] * np.int((n_trials / 2)) + ["hard"] * np.int((n_trials / 2))
+        trial_difficulties = ["easy"] * int((n_trials / 2)) + ["hard"] * int((n_trials / 2))
         random.shuffle(trial_difficulties)
         
         # Iterate blocks
@@ -102,7 +103,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
                         subject_id + 1,
                         3, # Trial code
                         block_nr + 1,
-                        block_reliability,
+                        block_reliability_order[block_nr],
                         trial_nr,
                         trial_difficulties[trial_nr],
                         cues[trial_difficulties[trial_nr]],
@@ -123,7 +124,7 @@ for subject_id in it.chain(ids_pilot, ids_experiment):
                     subject_id + 1,
                     2, # Block end code
                     block_nr + 1,
-                    block_reliability,
+                    block_reliability_order[block_nr],
                     0,
                     "",
                     "",
