@@ -25,6 +25,10 @@ EEG = pop_loadbv(PATH_RAW, [subject, '.vhdr'], [], []);
 % Redraw eeglab to inspect data
 eeglab redraw;
 
+% TASKS:
+% -Look at continuous data 
+% -Inspect EEG struct (metadata like number of channels, datapoints etc...)
+
 %% =============== EVENT CODING ===================================================================================================================
 
 % Iterate events in "EEG.event"
@@ -167,7 +171,10 @@ EEG.trialinfo = trialinfo;
 % Redraw eeglab to inspect data
 eeglab redraw;
 
-%% =============== PREPROCESSING OF CONTINUOUS DATA ===================================================================================================================
+% TASKS:
+% -Look at trialinfo in EEG-struct
+
+%% =============== LOAD CHANNEL INFO ===================================================================================================================
 
 % Add FCz, the online reference channel, as an empty channel
 EEG.data(end + 1, :) = 0;
@@ -183,6 +190,15 @@ EEG = pop_chanedit(EEG, 'lookup', channel_location_file);
 % Save original channel locations (for later interpolation)
 EEG.chanlocs_original = EEG.chanlocs;
 
+% Redraw eeglab to inspect data
+eeglab redraw;
+
+% TASKS:
+% -Look at chanlocs in EEG-struct
+% -Plot topography using the GUI (plot labels/numbers)
+
+%% =============== RESAMPLING & FILTERING ===================================================================================================================
+
 % Rereference data to CPz, so that FCz contains non-interpolated data
 EEG = pop_reref(EEG, 'CPz');
 
@@ -190,10 +206,19 @@ EEG = pop_reref(EEG, 'CPz');
 EEG = pop_resample(EEG, 200);
 
 % Filter data for ICA
-ICA = pop_basicfilter(ICA, [1 : ICA.nbchan], 'Cutoff', [2, 30], 'Design', 'butter', 'Filter', 'bandpass', 'Order', 6, 'RemoveDC', 'on', 'Boundary', 'boundary');
+ICA = pop_basicfilter(EEG, [1 : EEG.nbchan], 'Cutoff', [2, 30], 'Design', 'butter', 'Filter', 'bandpass', 'Order', 6, 'RemoveDC', 'on', 'Boundary', 'boundary');
 
 % Filter data for ERP analysis
 EEG = pop_basicfilter(EEG, [1 : EEG.nbchan], 'Cutoff', [0.01, 30], 'Design', 'butter', 'Filter', 'bandpass', 'Order', 6, 'RemoveDC', 'on', 'Boundary', 'boundary'); 
+
+% Redraw eeglab to inspect data
+eeglab redraw;
+
+% TASKS:
+% -Inspect the filtered continuous data using the GUI
+
+%% =============== REREFERENCING ===================================================================================================================
+
 
 % Detect and reject bad channels
 [EEG, EEG.chans_rejected] = pop_rejchan(EEG, 'elec', [1 : EEG.nbchan], 'threshold', 5, 'norm', 'on', 'measure', 'kurt');
@@ -213,7 +238,10 @@ dataRank = sum(eig(cov(double(ICA.data'))) > 1e-6);
 % Redraw eeglab to inspect data
 eeglab redraw;
 
-%% =============== EPOCH DATA & PREPROCESSING OF EPOCHED DATA ===================================================================================================
+% TASKS:
+% -Inspect effects of average reference in channel data (e.g. blink distribution)
+
+%% =============== EPOCH DATA ===================================================================================================
 
 % Epoch EEG data cue-locked
 EEG = pop_epoch(EEG, {'cue'}, [-0.3, 2], 'newname', [subject '_epoched'], 'epochinfo', 'yes');
@@ -223,38 +251,59 @@ ICA = pop_epoch(ICA, {'cue'}, [-0.3, 2], 'newname', [subject '_epoched'], 'epoch
 EEG = pop_rmbase(EEG, [-200, 0]);
 ICA = pop_rmbase(ICA, [-200, 0]);
 
+% Redraw eeglab to inspect data
+eeglab redraw;
+
+% TASKS:
+% -Plot an ERP image (via GUI) of all trials. Try several electrodes.
+
+%% =============== CLEAN EPOCHED DATA ===================================================================================================
+
 % Automatically reject trials
 [EEG, EEG.rejected_epochs] = pop_autorej(EEG, 'nogui', 'on');
 [ICA, ICA.rejected_epochs] = pop_autorej(ICA, 'nogui', 'on');
 
-% Remove rejected trials from trialinfo
+% Remove rejected trials from trialinfo as well
 EEG.trialinfo(EEG.rejected_epochs, :) = [];
 ICA.trialinfo(ICA.rejected_epochs, :) = [];
 
 % Redraw eeglab to inspect data
 eeglab redraw;
 
+% TASKS:
+% -Plot an ERP image again (via GUI) of the cleaned dataset.
+
 %% =============== RUN INDEPENDENT COMPONENT ANALYSIS ===================================================================================================
 
 % Run independent component analysis (ICA) on ICA-data
-ICA = pop_runica(ICA, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank - 5);
+ICA = pop_runica(ICA, 'extended', 1, 'interrupt', 'on', 'PCA', dataRank - 5); % PCA compression
 
 % Classify the independent components (ICs)
 ICA = iclabel(ICA);
 
 % Find eye-activity related ICs
-ICA.nobrainer = find(ICA.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+ICA.eye_movements = find(ICA.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
 
 % Copy ICs to ERP-dataset
 EEG = pop_editset(EEG, 'icachansind', 'ICA.icachansind', 'icaweights', 'ICA.icaweights', 'icasphere', 'ICA.icasphere');
 EEG.etc = ICA.etc;
-EEG.nobrainer = ICA.nobrainer;
+EEG.eye_movements = ICA.eye_movements;
 
-% Save IC set
-pop_saveset(EEG, 'filename', [subject, '_icset_cue_erp.set'], 'filepath', PATH_ICSET, 'check', 'on');
+% Redraw eeglab to inspect data
+eeglab redraw;
+
+% TASKS:
+% -Inspect ICs via GUI
+% -Inspect epoched channel data. Look at blinks.
+% -Inspect epoched ICA data.
 
 % Remove eye-related ICs
-EEG = pop_subcomp(EEG, EEG.nobrainer, 0);
+EEG = pop_subcomp(EEG, EEG.eye_movements, 0);
 
-% Save cleaned data
-pop_saveset(EEG, 'filename', [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'check', 'on');
+% Redraw eeglab to inspect data
+eeglab redraw;
+
+% TASKS:
+% -Inspect remaining ICs via GUI
+% -Inspect cleaned epoched channel data. Can you still see blinks?
+
