@@ -23,11 +23,14 @@ rts_correct = [];
 if ismember('part1', to_execute)
 
     % Loop subjects
+    ids = [];
     for s = 1 : length(subject_list)
 
         % Get id stuff
         subject = subject_list{s};
-        id = str2num(subject(3 : 4));
+
+        % Collect IDs as number
+        ids(s) = str2num(subject(3 : 4));
 
         % Load data
         EEG = pop_loadset('filename', [subject, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
@@ -64,13 +67,6 @@ if ismember('part1', to_execute)
         acc_hard_flip = sum(EEG.trialinfo(idx_hard_flip, 11) == 1) / sum(idx_hard_flip);
         acc_all(s, :) = [acc_easy_accu, acc_easy_flip, acc_hard_accu, acc_hard_flip];
 
-        % Get mean RT all trials
-        rt_easy_accu = nanmean(EEG.trialinfo(idx_easy_accu, 7));
-        rt_easy_flip = nanmean(EEG.trialinfo(idx_easy_flip, 7));
-        rt_hard_accu = nanmean(EEG.trialinfo(idx_hard_accu, 7));
-        rt_hard_flip = nanmean(EEG.trialinfo(idx_hard_flip, 7));
-        rts_all(s, :) = [rt_easy_accu, rt_easy_flip, rt_hard_accu, rt_hard_flip];
-
         % Get mean RT of correct trials
         rt_easy_accu = nanmean(EEG.trialinfo(idx_easy_accu & idx_correct, 7));
         rt_easy_flip = nanmean(EEG.trialinfo(idx_easy_flip & idx_correct, 7));
@@ -82,17 +78,35 @@ if ismember('part1', to_execute)
 
     figure()
 
-    subplot(2, 2, 1)
+    subplot(1, 2, 1)
     bar([1 : 4], mean(acc_all, 1))
+    set(gca,'xticklabel', {'easy accu', 'easy flip', 'hard accu', 'hard flip'})
+    ylim([0.4, 1.2])
     title('accuracy')
 
-    subplot(2, 2, 2)
-    bar([1 : 4], mean(rts_all, 1))
-    title('rt - all trials')
-
-    subplot(2, 2, 3)
+    subplot(1, 2, 2)
     bar([1 : 4], mean(rts_correct, 1))
+    set(gca,'xticklabel', {'easy accu', 'easy flip', 'hard accu', 'hard flip'})
+    ylim([400, 650])
     title('rt - correct trials')
+
+    % Perform rmANOVA for accuracy
+    varnames = {'subject', 'easy_accu', 'easy_flip', 'hard_accu', 'hard_flip'};
+    t = table(ids', acc_all(:, 1), acc_all(:, 2), acc_all(:, 3), acc_all(:, 4), 'VariableNames', varnames);
+    within = table({'easy'; 'easy'; 'hard'; 'hard'}, {'accu'; 'flip'; 'accu'; 'flip'}, 'VariableNames', {'difficulty', 'reliability'});
+    rm = fitrm(t, 'easy_accu-hard_flip~1', 'WithinDesign', within);
+    anova_acc = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
+    anova_acc
+
+
+    % Perform rmANOVA for RT
+    varnames = {'subject', 'easy_accu', 'easy_flip', 'hard_accu', 'hard_flip'};
+    t = table(ids', rts_correct(:, 1), rts_correct(:, 2), rts_correct(:, 3), rts_correct(:, 4), 'VariableNames', varnames);
+    within = table({'easy'; 'easy'; 'hard'; 'hard'}, {'accu'; 'flip'; 'accu'; 'flip'}, 'VariableNames', {'difficulty', 'reliability'});
+    rm = fitrm(t, 'easy_accu-hard_flip~1', 'WithinDesign', within);
+    anova_rt = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
+    anova_rt
+
 
 
 end % End part1
