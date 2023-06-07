@@ -7,8 +7,8 @@ PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list (stating the obvious here...)
-%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17'};
-subject_list = {'VP17'};
+%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19'};
+subject_list = {'VP19'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
