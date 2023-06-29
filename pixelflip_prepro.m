@@ -7,8 +7,11 @@ PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list (stating the obvious here...)
-%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27', 'VP29', 'VP31', 'VP18', 'VP20'};
-subject_list = {'VP18', 'VP20'};
+%subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
+%                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
+%                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26'};
+
+subject_list = {'VP24', 'VP26'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -55,7 +58,7 @@ for s = 1 : length(subject_list)
 
                 % Get reliability
                 if ismember(enum, [11, 12, 13, 14])
-                    reliability = 1; % Relaible
+                    reliability = 1; % Reliable
                 else
                     reliability = 0; % unreliable
                 end

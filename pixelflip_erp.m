@@ -5,7 +5,9 @@ PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27', 'VP29', 'VP31', 'VP18', 'VP20'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP11',...
+                'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27',...
+                'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -53,7 +55,7 @@ for s = 1 : length(subject_list)
 end
 
 % Select frontal channels
-frontal_channel_idx = [65, 15, 16, 19, 20];
+frontal_channel_idx = [65];
 
 % Calculate frontal ERPs. Data is then subject x times dimensionality.
 erp_frontal_easy_accu = squeeze(mean(erp_easy_accu(:, frontal_channel_idx, :), 2));
@@ -62,7 +64,7 @@ erp_frontal_hard_accu = squeeze(mean(erp_hard_accu(:, frontal_channel_idx, :), 2
 erp_frontal_hard_flip = squeeze(mean(erp_hard_flip(:, frontal_channel_idx, :), 2));
 
 % Define time window for CNV-parameterization
-cnv_times = [700, 900];
+cnv_times = [900, 1200];
 
 % Get cnv-time indices
 cnv_time_idx = EEG.times >= cnv_times(1) & EEG.times <= cnv_times(2);
