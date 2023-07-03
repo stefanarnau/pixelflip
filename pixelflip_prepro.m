@@ -9,9 +9,10 @@ PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 % Subject list (stating the obvious here...)
 %subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
 %                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
-%                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26'};
+%                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
+%                'VP28'};
 
-subject_list = {'VP24', 'VP26'};
+subject_list = {'VP28'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -290,55 +291,5 @@ for s = 1 : length(subject_list)
     pop_saveset(EEG_TF, 'filename', [subject, '_cleaned_feedback_tf.set'],  'filepath', PATH_AUTOCLEANED, 'check', 'on');
 
 end % End subject loop
-
-
-
-
-% Test
-% ============================================================================================================================================
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27', 'VP29', 'VP31'};
-
-% Load info
-EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
-
-% Get erp times
-erp_times = EEG.times(EEG.times >= -200 & EEG.times <= 1500);
-
-% Collect data
-erp_1 = zeros(length(erp_times), 1);
-erp_2 = zeros(length(erp_times), 1);
-erp_3 = zeros(length(erp_times), 1);
-erp_4 = zeros(length(erp_times), 1);
-for s = 1 : length(subject_list)
-
-    % Get id stuff
-    subject = subject_list{s};
-    id = str2num(subject(3 : 4));
-
-    % Load data
-    EEG = pop_loadset('filename',    [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
-
-
-    data_fcz = squeeze(mean(EEG.data([15, 65, 19, 20, 33, 34], EEG.times >= -200 & EEG.times <= 1500, :), 1));
-    tinf = EEG.trialinfo;
-    
-    idx_easy_flip0 = EEG.trialinfo(:, 4) == 0 & ismember(EEG.trialinfo(:, 2), [1, 3, 5]);
-    idx_easy_flip1 = EEG.trialinfo(:, 4) == 0 & ismember(EEG.trialinfo(:, 2), [2, 4, 6]);
-    idx_hard_flip0 = EEG.trialinfo(:, 4) == 1 & ismember(EEG.trialinfo(:, 2), [1, 3, 5]);
-    idx_hard_flip1 = EEG.trialinfo(:, 4) == 1 & ismember(EEG.trialinfo(:, 2), [2, 4, 6]);
-    
-    
-    erp_1 = erp_1 + mean(squeeze(data_fcz(:, idx_easy_flip0)), 2) / length (subject_list);
-    erp_2 = erp_2 + mean(squeeze(data_fcz(:, idx_easy_flip1)), 2) / length (subject_list);
-    erp_3 = erp_3 + mean(squeeze(data_fcz(:, idx_hard_flip0)), 2) / length (subject_list);
-    erp_4 = erp_4 + mean(squeeze(data_fcz(:, idx_hard_flip1)), 2) / length (subject_list);
-
-end
-
-figure()
-plot(erp_times, [erp_1, erp_2, erp_3, erp_4], 'LineWidth', 2)
-legend({'easy0', 'easy1', 'hard0', 'hard1'})
-xline([0, 1200])
-
 
 

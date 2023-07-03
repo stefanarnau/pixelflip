@@ -6,7 +6,10 @@ PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
+               'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
+               'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
+               'VP28'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -108,10 +111,10 @@ if ismember('part1', to_execute)
         % 11: accuracy  
 
         % Get condition idx
-        idx_easy_accu = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 0;
-        idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 1;
-        idx_hard_accu = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 0;
-        idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 1;
+        idx_easy_accu = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 1;
+        idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 0;
+        idx_hard_accu = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 1;
+        idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 0;
 
         % Loop channels
         for ch = 1 : EEG.nbchan
@@ -188,10 +191,10 @@ if ismember('part2', to_execute)
     load([PATH_TF_DATA, 'ersp_hard_flip.mat']);
 
     % Get theta idx
-    idx_theta = tf_freqs >= 4 & tf_freqs <= 8;
+    idx_theta = tf_freqs >= 4 & tf_freqs <= 7;
 
     % Frontal channels idx
-    idx_frontal = [15, 65, 19, 20, 33, 34];
+    idx_frontal = [15, 19, 20, 65];
 
     % Average across channels and subjects and theta-frequencies
     theta_easy_accu = squeeze(mean(ersp_easy_accu(:, idx_frontal, idx_theta, :), [1, 2, 3]));
@@ -207,7 +210,7 @@ if ismember('part2', to_execute)
     plot(tf_times, theta_hard_accu, 'm-', 'LineWidth', 2)
     plot(tf_times, theta_hard_flip, 'm:', 'LineWidth', 2)
     legend({'easy-accurate', 'easy-flip', 'hard-accurate', 'hard-flip'})
-    title('N=9 - Frontal Theta Power')
+    title('Frontal Theta Power')
     xline([0, 1200])
 
 
