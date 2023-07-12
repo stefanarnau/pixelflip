@@ -1,6 +1,6 @@
 clear all;
 
-% PATH VARS
+% PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
@@ -56,7 +56,7 @@ for s = 1 : length(subject_list)
 end
 
 % Select frontal channels
-frontal_channel_idx = [65];
+frontal_channel_idx = [65, 19, 20];
 
 % Calculate frontal ERPs. Data is then subject x times dimensionality.
 erp_frontal_easy_accu = squeeze(mean(erp_easy_accu(:, frontal_channel_idx, :), 2));
@@ -65,10 +65,12 @@ erp_frontal_hard_accu = squeeze(mean(erp_hard_accu(:, frontal_channel_idx, :), 2
 erp_frontal_hard_flip = squeeze(mean(erp_hard_flip(:, frontal_channel_idx, :), 2));
 
 % Define time window for CNV-parameterization
-cnv_times = [900, 1200];
+cnv_times_1 = [700, 900];
+cnv_times_2 = [900, 1100];
 
 % Get cnv-time indices
-cnv_time_idx = EEG.times >= cnv_times(1) & EEG.times <= cnv_times(2);
+cnv_time_idx_1 = EEG.times >= cnv_times_1(1) & EEG.times <= cnv_times_1(2);
+cnv_time_idx_2 = EEG.times >= cnv_times_2(1) & EEG.times <= cnv_times_2(2);
 
 %% ========================= PLOTTING ======================================================================================================================
 
@@ -77,84 +79,107 @@ figure()
 plot(EEG.times, mean(erp_frontal_easy_accu, 1), 'k-', 'LineWidth', 2)
 hold on;
 plot(EEG.times, mean(erp_frontal_easy_flip, 1), 'k:', 'LineWidth', 2)
-plot(EEG.times, mean(erp_frontal_hard_accu, 1), 'r-', 'LineWidth', 2)
-plot(EEG.times, mean(erp_frontal_hard_flip, 1), 'r:', 'LineWidth', 2)
+plot(EEG.times, mean(erp_frontal_hard_accu, 1), 'm-', 'LineWidth', 2)
+plot(EEG.times, mean(erp_frontal_hard_flip, 1), 'm:', 'LineWidth', 2)
 legend({'easy accu', 'easy flip', 'hard accu', 'hard flip'})
-title('frontal channels')
+title('ERP at: FCz, FC1, FC2')
 xline([0, 1200])
 ylims = [-5, 3];
 ylim(ylims)
 xlim([-200, 2000])
-rectangle('Position', [cnv_times(1), ylims(1), cnv_times(2) - cnv_times(1), ylims(2) - ylims(1)], 'FaceColor',[0.5, 1, 0.5, 0.2], 'EdgeColor', 'none')
+rectangle('Position', [cnv_times_1(1), ylims(1), cnv_times_1(2) - cnv_times_1(1), ylims(2) - ylims(1)], 'FaceColor',[0.5, 1, 0.5, 0.3], 'EdgeColor', 'none')
+rectangle('Position', [cnv_times_2(1), ylims(1), cnv_times_2(2) - cnv_times_2(1), ylims(2) - ylims(1)], 'FaceColor',[0.5, 0.5, 1, 0.3], 'EdgeColor', 'none')
 
 % Average over subjects and cnv-times to plot topographies
-topo_easy_accu = squeeze(mean(erp_easy_accu(:, :, cnv_time_idx), [1, 3]));
-topo_easy_flip = squeeze(mean(erp_easy_flip(:, :, cnv_time_idx), [1, 3]));
-topo_hard_accu = squeeze(mean(erp_hard_accu(:, :, cnv_time_idx), [1, 3]));
-topo_hard_flip = squeeze(mean(erp_hard_flip(:, :, cnv_time_idx), [1, 3]));
+topo_easy_accu_1 = squeeze(mean(erp_easy_accu(:, :, cnv_time_idx_1), [1, 3]));
+topo_easy_flip_1 = squeeze(mean(erp_easy_flip(:, :, cnv_time_idx_1), [1, 3]));
+topo_hard_accu_1 = squeeze(mean(erp_hard_accu(:, :, cnv_time_idx_1), [1, 3]));
+topo_hard_flip_1 = squeeze(mean(erp_hard_flip(:, :, cnv_time_idx_1), [1, 3]));
+topo_easy_accu_2 = squeeze(mean(erp_easy_accu(:, :, cnv_time_idx_2), [1, 3]));
+topo_easy_flip_2 = squeeze(mean(erp_easy_flip(:, :, cnv_time_idx_2), [1, 3]));
+topo_hard_accu_2 = squeeze(mean(erp_hard_accu(:, :, cnv_time_idx_2), [1, 3]));
+topo_hard_flip_2 = squeeze(mean(erp_hard_flip(:, :, cnv_time_idx_2), [1, 3]));
 
-% Create difference topographies for main-effects
-topo_difficulty = ((topo_hard_accu + topo_hard_flip) / 2) - ((topo_easy_accu + topo_easy_flip) / 2);
-topo_reliability = ((topo_easy_accu + topo_hard_accu) / 2) - ((topo_easy_flip + topo_hard_flip) / 2) ;
-
-% Plot topos
+% Plot topo timewin 1
 figure()
-
-subplot(3, 2, 1)
-topoplot(topo_easy_accu, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+subplot(2, 2, 1)
+topoplot(topo_easy_accu_1, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['easy accu'], 'FontSize', 10)
-
-subplot(3, 2, 2)
-topoplot(topo_easy_flip, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+title(['easy reliable'], 'FontSize', 10)
+subplot(2, 2, 2)
+topoplot(topo_easy_flip_1, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['easy flip'], 'FontSize', 10)
-
-subplot(3, 2, 3)
-topoplot(topo_hard_accu, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+title(['easy non-reliable'], 'FontSize', 10)
+subplot(2, 2, 3)
+topoplot(topo_hard_accu_1, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['hard accu'], 'FontSize', 10)
-
-subplot(3, 2, 4)
-topoplot(topo_hard_flip, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+title(['hard reliable'], 'FontSize', 10)
+subplot(2, 2, 4)
+topoplot(topo_hard_flip_1, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['hard flip'], 'FontSize', 10)
+title(['hard non-reliable'], 'FontSize', 10)
+sgtitle('Topographies CNV (700-900 ms)')
 
-subplot(3, 2, 5)
-topoplot(topo_difficulty, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+% Plot topo timewin 2
+figure()
+subplot(2, 2, 1)
+topoplot(topo_easy_accu_2, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
-set(gca, 'clim', [-1, 1])
+set(gca, 'clim', [-3, 3])
 colorbar;
-title(['hard - easy'], 'FontSize', 10)
-
-subplot(3, 2, 6)
-topoplot(topo_reliability, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+title(['easy reliable'], 'FontSize', 10)
+subplot(2, 2, 2)
+topoplot(topo_easy_flip_2, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
 colormap('jet')
-set(gca, 'clim', [-1, 1])
+set(gca, 'clim', [-3, 3])
 colorbar;
-title(['accu - flip'], 'FontSize', 10)
+title(['easy non-reliable'], 'FontSize', 10)
+subplot(2, 2, 3)
+topoplot(topo_hard_accu_2, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+colormap('jet')
+set(gca, 'clim', [-3, 3])
+colorbar;
+title(['hard reliable'], 'FontSize', 10)
+subplot(2, 2, 4)
+topoplot(topo_hard_flip_2, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+colormap('jet')
+set(gca, 'clim', [-3, 3])
+colorbar;
+title(['hard non-reliable'], 'FontSize', 10)
+sgtitle('Topographies CNV (900-1100 ms)')
 
 %% ========================= STATISTICS ======================================================================================================================
 
 % Average CNV valus in time window for each subject
-cnv_values = [mean(erp_frontal_easy_accu(:, cnv_time_idx), 2),...
-              mean(erp_frontal_easy_flip(:, cnv_time_idx), 2),...
-              mean(erp_frontal_hard_accu(:, cnv_time_idx), 2),...
-              mean(erp_frontal_hard_flip(:, cnv_time_idx), 2)];
+cnv_values_1 = [mean(erp_frontal_easy_accu(:, cnv_time_idx_1), 2),...
+                mean(erp_frontal_easy_flip(:, cnv_time_idx_1), 2),...
+                mean(erp_frontal_hard_accu(:, cnv_time_idx_1), 2),...
+                mean(erp_frontal_hard_flip(:, cnv_time_idx_1), 2)];
+cnv_values_2 = [mean(erp_frontal_easy_accu(:, cnv_time_idx_2), 2),...
+                mean(erp_frontal_easy_flip(:, cnv_time_idx_2), 2),...
+                mean(erp_frontal_hard_accu(:, cnv_time_idx_2), 2),...
+                mean(erp_frontal_hard_flip(:, cnv_time_idx_2), 2)];
 
 % Perform rmANOVA for CNV-values
 varnames = {'subject', 'easy_accu', 'easy_flip', 'hard_accu', 'hard_flip'};
-t = table(ids', cnv_values(:, 1), cnv_values(:, 2), cnv_values(:, 3), cnv_values(:, 4), 'VariableNames', varnames);
+t = table(ids', cnv_values_1(:, 1), cnv_values_1(:, 2), cnv_values_1(:, 3), cnv_values_1(:, 4), 'VariableNames', varnames);
 within = table({'easy'; 'easy'; 'hard'; 'hard'}, {'accu'; 'flip'; 'accu'; 'flip'}, 'VariableNames', {'difficulty', 'reliability'});
 rm = fitrm(t, 'easy_accu-hard_flip~1', 'WithinDesign', within);
-anova_cnv = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
-anova_cnv
+anova_cnv_1 = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
+anova_cnv_1
+
+varnames = {'subject', 'easy_accu', 'easy_flip', 'hard_accu', 'hard_flip'};
+t = table(ids', cnv_values_2(:, 1), cnv_values_2(:, 2), cnv_values_2(:, 3), cnv_values_2(:, 4), 'VariableNames', varnames);
+within = table({'easy'; 'easy'; 'hard'; 'hard'}, {'accu'; 'flip'; 'accu'; 'flip'}, 'VariableNames', {'difficulty', 'reliability'});
+rm = fitrm(t, 'easy_accu-hard_flip~1', 'WithinDesign', within);
+anova_cnv_2 = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
+anova_cnv_2
 

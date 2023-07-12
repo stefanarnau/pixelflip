@@ -1,13 +1,14 @@
 clear all;
 
-% PATH VARS
+% PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
-PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
+PATH_AUTOCLEANED = '/home/plkn/Desktop/raw_data_seminar_2023/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP11',...
-                'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27',...
-                'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
+                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
+                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
+                'VP28', 'VP13', 'VP15'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -35,7 +36,7 @@ if ismember('part1', to_execute)
         ids(s) = str2num(subject(3 : 4));
 
         % Load data
-        EEG = pop_loadset('filename', [subject, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
+        EEG = pop_loadset('filename', [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
         % To double precision
         eeg_data = double(EEG.data);

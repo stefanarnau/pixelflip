@@ -7,10 +7,10 @@ PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
-               'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
-               'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
-               'VP28'};
-
+                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
+                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
+                'VP28', 'VP13', 'VP15'};
+    
 % Init eeglab
 addpath(PATH_EEGLAB);
 eeglab;
@@ -25,7 +25,7 @@ if ismember('part1', to_execute)
     EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
     % Set complex Morlet wavelet parameters
-    n_frq = 20;
+    n_frq = 30;
     frqrange = [2, 20];
     tfres_range = [600, 300];
 
@@ -191,7 +191,7 @@ if ismember('part2', to_execute)
     load([PATH_TF_DATA, 'ersp_hard_flip.mat']);
 
     % Get theta idx
-    idx_theta = tf_freqs >= 4 & tf_freqs <= 7;
+    idx_theta = tf_freqs >= 8 & tf_freqs <= 12;
 
     % Frontal channels idx
     idx_frontal = [15, 19, 20, 65];
