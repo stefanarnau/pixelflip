@@ -1,14 +1,14 @@
 clear all;
 
 % PATH VARS
-PATH_EEGLAB = '/home/plkn/eeglab2022.1/';
-PATH_IN     = '/home/plkn/Desktop/raw_data_seminar_2023/';
+PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
+PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
                 'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
                 'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
-                'VP28', 'VP13', 'VP15'};
+                'VP28', 'VP13', 'VP15', 'VP04', 'VP10', 'VP14', 'VP34'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
