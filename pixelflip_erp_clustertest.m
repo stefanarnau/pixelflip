@@ -6,10 +6,9 @@ PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12',...
-                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
-                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
-                'VP28', 'VP13', 'VP15', 'VP04', 'VP10', 'VP14', 'VP34'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP11', 'VP09', 'VP16',...
+                'VP17', 'VP19', 'VP21', 'VP23', 'VP25', 'VP27', 'VP29', 'VP31', 'VP18', 'VP20',...
+                'VP22', 'VP24', 'VP26', 'VP28', 'VP13', 'VP15', 'VP04', 'VP10', 'VP14', 'VP34'};
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -308,29 +307,47 @@ for ch = 1 : n_chans
 end
 
 % Save effect sizes
-dlmwrite([PATH_VEUSZ, 'effect_sizes_difficulty.csv'], apes_difficulty);
-dlmwrite([PATH_VEUSZ, 'effect_sizes_agency.csv'], apes_agency);
-dlmwrite([PATH_VEUSZ, 'effect_sizes_interaction.csv'], apes_interaction);
+dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
+dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
+dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
 
-aa=bb
+% Get cluster-times for agency
+sig = find([stat_agency.posclusters.prob] <= testalpha);
+agency_clust_times = {};
+for cl = 1 : numel(sig)
+    figure('Visible', 'off'); clf;
+    idx = stat_agency.posclusterslabelmat == sig(cl);
+    idx_time = logical(mean(idx, 1));
+    agency_clust_times{cl} = erp_times(idx_time);
+end
 
-% Save averages
-dlmwrite([PATH_VEUSZ, 'erp_easy_average.csv'], squeeze(mean(GA_easy.individual, 1)));
-dlmwrite([PATH_VEUSZ, 'erp_hard_average.csv'], squeeze(mean(GA_hard.individual, 1)));
-dlmwrite([PATH_VEUSZ, 'erp_accu_average.csv'], squeeze(mean(GA_accu.individual, 1)));
-dlmwrite([PATH_VEUSZ, 'erp_flip_average.csv'], squeeze(mean(GA_flip.individual, 1)));
 
 
-% Plot effect size topos
-% cmap = 'jet';        
-% clim = [-0.75, 0.75];  
-% for t = -1500 : 300 : 0
-%     figure('Visible', 'off'); clf;
-%     [tidx_val, tidx_pos] = min(abs(stat.time - t));
-%     pd = apes(:, tidx_pos);
-%     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-%     colormap(cmap);
-%     caxis(clim);
-%     saveas(gcf, [PATH_VEUSZ, 'topo_', num2str(t), 'ms', '.png']);
-% end
+% Save lineplots at FCz
+dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'], [mean(squeeze(erp_easy_accu(:, 20, :)), 1);...
+                                             mean(squeeze(erp_easy_flip(:, 20, :)), 1);...
+                                             mean(squeeze(erp_hard_accu(:, 20, :)), 1);...
+                                             mean(squeeze(erp_hard_flip(:, 20, :)), 1)]);
+
+% Save lineplots at POz
+dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'], [mean(squeeze(erp_easy_accu(:, 57, :)), 1);...
+                                             mean(squeeze(erp_easy_flip(:, 57, :)), 1);...
+                                             mean(squeeze(erp_hard_accu(:, 57, :)), 1);...
+                                             mean(squeeze(erp_hard_flip(:, 57, :)), 1)]);
+
+% Save erp-times
+dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
+
+% Plot effect size topos at selected time points for agency
+clim = [-0.05, 0.3];
+tpoints = [570, 830, 1030, 1140, 1280, 1440];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_agency(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(flipud(bone));
+    caxis(clim);
+    saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
+end
 
