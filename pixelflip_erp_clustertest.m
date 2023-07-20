@@ -351,3 +351,16 @@ for t = 1 : length(tpoints)
     saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
+% Plot effect size topos at selected time points for difficulty
+clim = [-0.05, 0.3];
+tpoints = [120, 220, 420, 1350, 1460];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_difficulty(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(flipud(bone));
+    caxis(clim);
+    saveas(gcf, [PATH_VEUSZ, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
+end
+
