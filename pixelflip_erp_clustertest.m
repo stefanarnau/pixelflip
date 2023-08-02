@@ -9,7 +9,7 @@ PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/';
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
                 'VP11', 'VP12', 'VP13', 'VP14', 'VP15', 'VP16', 'VP17', 'VP18', 'VP19', 'VP20',...
                 'VP21', 'VP22', 'VP23', 'VP24', 'VP25', 'VP26', 'VP27', 'VP28', 'VP29', 'VP30',...
-                'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37'};
+                'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37', 'VP38'};
 
 % Exclude from analysis
 subject_list = setdiff(subject_list, {'VP07'}); % Age outlier
@@ -27,7 +27,7 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1500;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1200;
 erp_times = EEG.times(erp_times_idx);
 
 % Get chanlocs
@@ -327,11 +327,22 @@ end
 
 
 
-% Save lineplots at FCz
+% Save lineplots at Fz
+dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_easy_accu(:, 11, :)), 1);...
+                                             mean(squeeze(erp_easy_flip(:, 11, :)), 1);...
+                                             mean(squeeze(erp_hard_accu(:, 11, :)), 1);...
+                                             mean(squeeze(erp_hard_flip(:, 11, :)), 1)]);
+
+% Save lineplots at POz
 dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'], [mean(squeeze(erp_easy_accu(:, 20, :)), 1);...
                                              mean(squeeze(erp_easy_flip(:, 20, :)), 1);...
                                              mean(squeeze(erp_hard_accu(:, 20, :)), 1);...
                                              mean(squeeze(erp_hard_flip(:, 20, :)), 1)]);
+
+dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_easy_accu(:, 48, :)), 1);...
+                                             mean(squeeze(erp_easy_flip(:, 48, :)), 1);...
+                                             mean(squeeze(erp_hard_accu(:, 48, :)), 1);...
+                                             mean(squeeze(erp_hard_flip(:, 48, :)), 1)]);
 
 % Save lineplots at POz
 dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'], [mean(squeeze(erp_easy_accu(:, 57, :)), 1);...
@@ -344,7 +355,7 @@ dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
 clim = [-0.05, 0.3];
-tpoints = [570, 830, 1030, 1140, 1280, 1440];
+tpoints = [340, 570, 700, 880, 1100];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
@@ -357,7 +368,7 @@ end
 
 % Plot effect size topos at selected time points for difficulty
 clim = [-0.05, 0.3];
-tpoints = [120, 220, 420, 1350, 1460];
+tpoints = [120, 220, 420, 700, 1100];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
