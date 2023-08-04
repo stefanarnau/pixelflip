@@ -3,6 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
+PATH_OUT         = '/mnt/data_dump/pixelflip/veusz/behavior/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -114,5 +115,15 @@ if ismember('part1', to_execute)
     anova_rt
 
 
+    % Save behavioral data for veusz
+    rt_mean = mean(rts_correct, 1);
+    rt_sd = std(rts_correct, [], 1);
+    rt_out = [rt_mean(1), rt_sd(1), rt_mean(3), rt_sd(3); rt_mean(2), rt_sd(2), rt_mean(4), rt_sd(4)];
+    dlmwrite([PATH_OUT, 'rt_veusz.csv'], rt_out, 'delimiter', '\t');
+
+    acc_mean = mean(acc_all, 1);
+    acc_sd = std(acc_all, [], 1);
+    acc_out = [acc_mean(1), acc_sd(1), acc_mean(3), acc_sd(3); acc_mean(2), acc_sd(2), acc_mean(4), acc_sd(4)];
+    dlmwrite([PATH_OUT, 'acc_veusz.csv'], acc_out, 'delimiter', '\t');
 
 end % End part1
