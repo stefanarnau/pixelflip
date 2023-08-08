@@ -355,7 +355,7 @@ dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
 clim = [-0.05, 0.3];
-tpoints = [340, 570, 700, 880, 1100];
+tpoints = [220, 570, 700, 860, 1100];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
