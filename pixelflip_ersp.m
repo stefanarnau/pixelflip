@@ -6,10 +6,13 @@ PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07',...
-                'VP11', 'VP09', 'VP16', 'VP17', 'VP19', 'VP21', 'VP23', 'VP25',...
-                'VP27', 'VP29', 'VP31', 'VP18', 'VP20', 'VP22', 'VP24', 'VP26',...
-                'VP28', 'VP13', 'VP15'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
+                'VP11', 'VP12', 'VP13', 'VP14', 'VP15', 'VP16', 'VP17', 'VP18', 'VP19', 'VP20',...
+                'VP21', 'VP22', 'VP23', 'VP24', 'VP25', 'VP26', 'VP27', 'VP28', 'VP29', 'VP30',...
+                'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37', 'VP38', 'VP39', 'VP40'};
+
+% Exclude from analysis
+subject_list = setdiff(subject_list, {'VP07'}); % Age outlier
     
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -191,7 +194,7 @@ if ismember('part2', to_execute)
     load([PATH_TF_DATA, 'ersp_hard_flip.mat']);
 
     % Get theta idx
-    idx_theta = tf_freqs >= 8 & tf_freqs <= 12;
+    idx_theta = tf_freqs >= 4 & tf_freqs <= 7;
 
     % Frontal channels idx
     idx_frontal = [15, 19, 20, 65];
