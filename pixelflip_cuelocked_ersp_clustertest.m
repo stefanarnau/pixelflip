@@ -489,7 +489,7 @@ if ismember('part3', to_execute)
 
         % Get average traces
         idx_chan = [20];
-        idx_freq = tf_freqs >= 4 & tf_freqs <= 8;
+        idx_freq = tf_freqs >= 8 & tf_freqs <= 12;
         ave_traces(1, :) = ave_traces(1, :) + squeeze(mean(ersp_easy_accu(idx_chan, idx_freq, :), [1, 2]))';
         ave_traces(2, :) = ave_traces(2, :) + squeeze(mean(ersp_easy_flip(idx_chan, idx_freq, :), [1, 2]))';
         ave_traces(3, :) = ave_traces(3, :) + squeeze(mean(ersp_hard_accu(idx_chan, idx_freq, :), [1, 2]))';
