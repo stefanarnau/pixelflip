@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/feedback_erp/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_sequential/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -24,28 +24,14 @@ addpath(ft_path);
 ft_defaults;
 
 % Load info
-EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
+EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1000;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1200;
 erp_times = EEG.times(erp_times_idx);
 
 % Get chanlocs
 chanlocs = EEG.chanlocs;
-
-% Trialinfo columns:
-% 01: trial_nr
-% 02: block_nr
-% 03: reliability
-% 04: difficulty
-% 05: flipped
-% 06: key_pressed
-% 07: rt
-% 08: color_pressed
-% 09: feedback_accuracy
-% 10: feedback_color
-% 11: accuracy
-
 
 % Matrices to collect data. Dimensionality: subjects x channels x times
 erp_easy_asis = zeros(length(subject_list), EEG.nbchan, length(erp_times));
@@ -64,13 +50,86 @@ for s = 1 : length(subject_list)
     ids(s) = str2num(subject(3 : 4));
 
     % Load subject data. EEG data has dimensionality channels x times x trials
-    EEG = pop_loadset('filename',    [subject, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+    EEG = pop_loadset('filename',    [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+
+    % Trialinfo columns:
+    % 01: trial_nr
+    % 02: block_nr
+    % 03: reliability
+    % 04: difficulty
+    % 05: flipped
+    % 06: key_pressed
+    % 07: rt
+    % 08: color_pressed
+    % 09: feedback_accuracy
+    % 10: feedback_color
+    % 11: accuracy
+
+    % Loop epochs
+    for e = 1 : size(EEG.trialinfo, 1)
+
+        % If in flip block
+        if EEG.trialinfo(e, 3) == 0
+
+            % Check in previous trial if available
+            if sum(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1) > 0 
+
+                % Get index of previous trial
+                idx_prev = find(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1);
+
+                % Check if different blocks
+                if EEG.trialinfo(e, 2) ~= EEG.trialinfo(idx_prev, 2)
+
+                    % Not a good trial...
+                    EEG.trialinfo(e, 12) = -1;
+
+                    % Next
+                    continue;
+
+                end
+
+                % Check if previous incorrect
+                if EEG.trialinfo(idx_prev, 11) ~= 1
+
+                    % Not a good trial...
+                    EEG.trialinfo(e, 12) = -1;
+
+                    % Next
+                    continue;
+
+                end
+
+                % Check if previous was flipped
+                if EEG.trialinfo(idx_prev, 5) == 1
+
+                    % Yes
+                    EEG.trialinfo(e, 12) = 1;
+
+                elseif EEG.trialinfo(idx_prev, 5) == 0
+
+                    % No
+                    EEG.trialinfo(e, 12) = 0;
+                
+                end
+
+            % If not a flip block
+            else
+
+                % Not a good trial...
+                EEG.trialinfo(e, 12) = -1;
+
+                % Next
+                continue;
+
+            end
+        end
+    end
     
     % Get trial-indices of conditions
-    idx_easy_asis = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 5) == 0;
-    idx_easy_flip = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 5) == 1;
-    idx_hard_asis = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 5) == 0;
-    idx_hard_flip = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 5) == 1;
+    idx_easy_asis = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
+    idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
+    idx_hard_asis = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
+    idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
     
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_easy_asis(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_easy_asis)), 3);
@@ -168,21 +227,6 @@ erp_hard_asis = erp_hard_asis(:, new_order_idx, :);
 erp_hard_flip = erp_hard_flip(:, new_order_idx, :);
 chanlocs = chanlocs(new_order_idx);
 
-% A simple plot, why not...
-idx_chan = [48];
-figure()
-pd = squeeze(mean(erp_easy_asis(:, idx_chan, :), [1, 2]));
-plot(erp_times, pd, 'k', 'LineWidth', 2)
-hold on;
-pd = squeeze(mean(erp_easy_flip(:, idx_chan, :), [1, 2]));
-plot(erp_times, pd, 'k:', 'LineWidth', 2)
-pd = squeeze(mean(erp_hard_asis(:, idx_chan, :), [1, 2]));
-plot(erp_times, pd, 'm', 'LineWidth', 2)
-pd = squeeze(mean(erp_hard_flip(:, idx_chan, :), [1, 2]));
-plot(erp_times, pd, 'm:', 'LineWidth', 2)
-legend({'ez-asis', 'ez-flip', 'hard-asis', 'hard-fip'})
-title('Pz - feedback-locked')
-
 % Restructure coordinates
 chanlabs = {};
 coords = [];
@@ -221,7 +265,7 @@ for s = 1 : length(subject_list)
 end 
 GA_easy = ft_timelockgrandaverage(cfg, GA{1, :});
 
-% GA struct hard trials
+% GA struct easy trials
 GA = {};
 for s = 1 : length(subject_list)
     chan_time_data = (squeeze(erp_hard_asis(s, :, :)) + squeeze(erp_hard_flip(s, :, :))) ./ 2;
@@ -248,23 +292,23 @@ for s = 1 : length(subject_list)
 end 
 GA_flip = ft_timelockgrandaverage(cfg, GA{1, :});
 
-% GA struct interaction easy
+% GA struct interaction asis
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_easy_asis(s, :, :)) - squeeze(erp_easy_flip(s, :, :));
+    chan_time_data = squeeze(erp_easy_asis(s, :, :)) - squeeze(erp_hard_asis(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
-GA_interaction_easy = ft_timelockgrandaverage(cfg, GA{1, :});
+GA_interaction_asis = ft_timelockgrandaverage(cfg, GA{1, :});
 
-% GA struct interaction hard
+% GA struct interaction flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_hard_asis(s, :, :)) - squeeze(erp_hard_flip(s, :, :));
+    chan_time_data = squeeze(erp_easy_flip(s, :, :)) - squeeze(erp_hard_flip(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
-GA_interaction_hard = ft_timelockgrandaverage(cfg, GA{1, :});
+GA_interaction_flip = ft_timelockgrandaverage(cfg, GA{1, :});
 
 % Testparams
 testalpha  = 0.05;
@@ -297,8 +341,8 @@ cfg.design = design;
 
 % The tests
 [stat_difficulty]  = ft_timelockstatistics(cfg, GA_easy, GA_hard);
-[stat_flipped]      = ft_timelockstatistics(cfg, GA_asis, GA_flip);
-[stat_interaction] = ft_timelockstatistics(cfg, GA_interaction_easy, GA_interaction_hard);
+[stat_agency]      = ft_timelockstatistics(cfg, GA_asis, GA_flip);
+[stat_interaction] = ft_timelockstatistics(cfg, GA_interaction_asis, GA_interaction_flip);
 
 % Significant clusters difficulty
 sig = find([stat_difficulty.posclusters.prob] <= testalpha);
@@ -308,12 +352,12 @@ for cl = 1 : numel(sig)
     dlmwrite([PATH_VEUSZ, 'difficulty_cluster_', num2str(cl), '_contour.csv'], idx);
 end
 
-% Significant clusters flipped
-sig = find([stat_flipped.posclusters.prob] <= testalpha);
+% Significant clusters agency
+sig = find([stat_agency.posclusters.prob] <= testalpha);
 for cl = 1 : numel(sig)
-    idx = stat_flipped.posclusterslabelmat == sig(cl);
-    pval = round(stat_flipped.posclusters(sig(cl)).prob, 3);
-    dlmwrite([PATH_VEUSZ, 'flipped_cluster_', num2str(cl), '_contour.csv'], idx);
+    idx = stat_agency.posclusterslabelmat == sig(cl);
+    pval = round(stat_agency.posclusters(sig(cl)).prob, 3);
+    dlmwrite([PATH_VEUSZ, 'agency_cluster_', num2str(cl), '_contour.csv'], idx);
 end
 
 % Significant clusters interaction
@@ -327,22 +371,33 @@ end
 % Calculate effect sizes
 n_chans = numel(chanlocs);
 apes_difficulty  = [];
-apes_flipped      = [];
+apes_agency      = [];
 apes_interaction = [];
 df_effect = 1;
 for ch = 1 : n_chans
     petasq = (squeeze(stat_difficulty.stat(ch, :)) * df_effect) ./ ((squeeze(stat_difficulty.stat(ch, :)) * df_effect) + (n_subjects - 1));
     apes_difficulty(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
-    petasq = (squeeze(stat_flipped.stat(ch, :)) * df_effect) ./ ((squeeze(stat_flipped.stat(ch, :)) * df_effect) + (n_subjects - 1));
-    apes_flipped(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
+    petasq = (squeeze(stat_agency.stat(ch, :)) * df_effect) ./ ((squeeze(stat_agency.stat(ch, :)) * df_effect) + (n_subjects - 1));
+    apes_agency(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
     petasq = (squeeze(stat_interaction.stat(ch, :)) * df_effect) ./ ((squeeze(stat_interaction.stat(ch, :)) * df_effect) + (n_subjects - 1));
     apes_interaction(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
 end
 
 % Save effect sizes
 dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
-dlmwrite([PATH_VEUSZ, 'apes_flipped.csv'], apes_flipped);
+dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
 dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
+
+% Get cluster-times for agency
+sig = find([stat_agency.posclusters.prob] <= testalpha);
+agency_clust_times = {};
+for cl = 1 : numel(sig)
+    figure('Visible', 'off'); clf;
+    idx = stat_agency.posclusterslabelmat == sig(cl);
+    idx_time = logical(mean(idx, 1));
+    agency_clust_times{cl} = erp_times(idx_time);
+end
+
 
 
 % Save lineplots at Fz
@@ -371,22 +426,22 @@ dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'], [mean(squeeze(erp_easy_asis(:, 57, :
 % Save erp-times
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
-% Plot effect size topos at selected time points for flipped
+% Plot effect size topos at selected time points for agency
 clim = [-0.05, 0.3];
-tpoints = [200, 300, 600];
+tpoints = [200, 500, 800];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_flipped(:, tidx), 2);
+    pd = mean(apes_agency(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
     colormap(flipud(bone));
     caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_flipped_', num2str(tpoints(t)), 'ms', '.png']);
+    saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
 % Plot effect size topos at selected time points for difficulty
 clim = [-0.05, 0.3];
-tpoints = [-180, 0, 250];
+tpoints = [200, 430, 800];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
@@ -395,18 +450,5 @@ for t = 1 : length(tpoints)
     colormap(flipud(bone));
     caxis(clim);
     saveas(gcf, [PATH_VEUSZ, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
-end
-
-% Plot effect size topos at selected time points for interaction
-clim = [-0.05, 0.3];
-tpoints = [250, 550, 650];
-for t = 1 : length(tpoints)
-    figure('Visible', 'off'); clf;
-    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_interaction(:, tidx), 2);
-    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(flipud(bone));
-    caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_interaction_', num2str(tpoints(t)), 'ms', '.png']);
 end
 

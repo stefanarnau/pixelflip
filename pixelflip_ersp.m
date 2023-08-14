@@ -19,7 +19,7 @@ addpath(PATH_EEGLAB);
 eeglab;
 
 % SWITCH: Switch parts of script on/off
-to_execute = {'part2'};
+to_execute = {'part1'};
 
 % Part 1: Calculate ersp
 if ismember('part1', to_execute)
