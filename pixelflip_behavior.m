@@ -42,9 +42,6 @@ if ismember('part1', to_execute)
         % Load data
         EEG = pop_loadset('filename', [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
-        % To double precision
-        eeg_data = double(EEG.data);
-
         % Trialinfo columns:
         % 01: trial_nr
         % 02: block_nr

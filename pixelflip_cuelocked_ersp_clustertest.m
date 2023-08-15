@@ -88,6 +88,10 @@ if ismember('part1', to_execute)
 
         % Result matrices
         chanlocs = EEG.chanlocs;
+        rpow_easy_accu = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
+        rpow_easy_flip = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
+        rpow_hard_accu = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
+        rpow_hard_flip = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
         ersp_easy_accu = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
         ersp_easy_flip = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
         ersp_hard_accu = zeros(EEG.nbchan, length(tf_freqs), length(tf_times));
@@ -134,7 +138,7 @@ if ismember('part1', to_execute)
         idx_hard_flip = randsample(idx_hard_flip, min_n);
 
         % Loop channels
-        for ch = 1 : EEG.nbchan
+        parfor ch = 1 : EEG.nbchan
 
             % Init tf matrices
             powcube = NaN(length(tf_freqs), EEG.pnts, EEG.trials);
@@ -178,6 +182,12 @@ if ismember('part1', to_execute)
             blvals = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
             % Calculate ersp
+            rpow_easy_accu(ch, :, :) = squeeze(mean(powcube(:, :, idx_easy_accu), 3));
+            rpow_easy_flip(ch, :, :) = squeeze(mean(powcube(:, :, idx_easy_flip), 3));
+            rpow_hard_accu(ch, :, :) = squeeze(mean(powcube(:, :, idx_hard_accu), 3));
+            rpow_hard_flip(ch, :, :) = squeeze(mean(powcube(:, :, idx_hard_flip), 3));
+
+            % Calculate ersp
             ersp_easy_accu(ch, :, :) = 10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy_accu), 3)), blvals));
             ersp_easy_flip(ch, :, :) = 10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy_flip), 3)), blvals));
             ersp_hard_accu(ch, :, :) = 10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard_accu), 3)), blvals));
@@ -195,6 +205,10 @@ if ismember('part1', to_execute)
         save([PATH_TF_DATA, 'chanlocs.mat'], 'chanlocs');
         save([PATH_TF_DATA, 'tf_freqs.mat'], 'tf_freqs');
         save([PATH_TF_DATA, 'tf_times.mat'], 'tf_times');
+        save([PATH_TF_DATA, subject, '_rpow_easy_accu.mat'], 'rpow_easy_accu');
+        save([PATH_TF_DATA, subject, '_rpow_easy_flip.mat'], 'rpow_easy_flip');
+        save([PATH_TF_DATA, subject, '_rpow_hard_accu.mat'], 'rpow_hard_accu');
+        save([PATH_TF_DATA, subject, '_rpow_hard_flip.mat'], 'rpow_hard_flip');
         save([PATH_TF_DATA, subject, '_ersp_easy_accu.mat'], 'ersp_easy_accu');
         save([PATH_TF_DATA, subject, '_ersp_easy_flip.mat'], 'ersp_easy_flip');
         save([PATH_TF_DATA, subject, '_ersp_hard_accu.mat'], 'ersp_hard_accu');
@@ -215,8 +229,6 @@ if ismember('part2', to_execute)
     load([PATH_TF_DATA, 'chanlocs.mat']);
     load([PATH_TF_DATA, 'tf_freqs.mat']);
     load([PATH_TF_DATA, 'tf_times.mat']);
-
-
 
     % Build elec struct
     for ch = 1 : length(chanlocs)
@@ -479,21 +491,21 @@ if ismember('part3', to_execute)
         subject = subject_list{s};
 
         % Load ersp data
-        load([PATH_TF_DATA, subject, '_ersp_easy_accu.mat']);
-        load([PATH_TF_DATA, subject, '_ersp_easy_flip.mat']);
-        load([PATH_TF_DATA, subject, '_ersp_hard_accu.mat']);
-        load([PATH_TF_DATA, subject, '_ersp_hard_flip.mat']);
+        load([PATH_TF_DATA, subject, '_itpc_easy_accu.mat']);
+        load([PATH_TF_DATA, subject, '_itpc_easy_flip.mat']);
+        load([PATH_TF_DATA, subject, '_itpc_hard_accu.mat']);
+        load([PATH_TF_DATA, subject, '_itpc_hard_flip.mat']);
 
         % get dims
-        [n_channels, n_freqs, n_times] = size(ersp_easy_accu);
+        [n_channels, n_freqs, n_times] = size(itpc_easy_accu);
 
         % Get average traces
         idx_chan = [20];
-        idx_freq = tf_freqs >= 8 & tf_freqs <= 12;
-        ave_traces(1, :) = ave_traces(1, :) + squeeze(mean(ersp_easy_accu(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(2, :) = ave_traces(2, :) + squeeze(mean(ersp_easy_flip(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(3, :) = ave_traces(3, :) + squeeze(mean(ersp_hard_accu(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(4, :) = ave_traces(4, :) + squeeze(mean(ersp_hard_flip(idx_chan, idx_freq, :), [1, 2]))';
+        idx_freq = tf_freqs >= 4 & tf_freqs <= 7;
+        ave_traces(1, :) = ave_traces(1, :) + squeeze(mean(itpc_easy_accu(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(2, :) = ave_traces(2, :) + squeeze(mean(itpc_easy_flip(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(3, :) = ave_traces(3, :) + squeeze(mean(itpc_hard_accu(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(4, :) = ave_traces(4, :) + squeeze(mean(itpc_hard_flip(idx_chan, idx_freq, :), [1, 2]))';
 
     end
 

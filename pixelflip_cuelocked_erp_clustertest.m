@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_long/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -27,7 +27,7 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1200;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1800;
 erp_times = EEG.times(erp_times_idx);
 
 % Get chanlocs
@@ -271,29 +271,10 @@ cfg.design = design;
 [stat_agency]      = ft_timelockstatistics(cfg, GA_accu, GA_flip);
 [stat_interaction] = ft_timelockstatistics(cfg, GA_interaction_accu, GA_interaction_flip);
 
-% Significant clusters difficulty
-sig = find([stat_difficulty.posclusters.prob] <= testalpha);
-for cl = 1 : numel(sig)
-    idx = stat_difficulty.posclusterslabelmat == sig(cl);
-    pval = round(stat_difficulty.posclusters(sig(cl)).prob, 3);
-    dlmwrite([PATH_VEUSZ, 'difficulty_cluster_', num2str(cl), '_contour.csv'], idx);
-end
-
-% Significant clusters agency
-sig = find([stat_agency.posclusters.prob] <= testalpha);
-for cl = 1 : numel(sig)
-    idx = stat_agency.posclusterslabelmat == sig(cl);
-    pval = round(stat_agency.posclusters(sig(cl)).prob, 3);
-    dlmwrite([PATH_VEUSZ, 'agency_cluster_', num2str(cl), '_contour.csv'], idx);
-end
-
-% Significant clusters interaction
-sig = find([stat_interaction.posclusters.prob] <= testalpha);
-for cl = 1 : numel(sig)
-    idx = stat_interaction.posclusterslabelmat == sig(cl);
-    pval = round(stat_interaction.posclusters(sig(cl)).prob, 3);
-    dlmwrite([PATH_VEUSZ, 'interactioncluster_', num2str(cl), '_contour.csv'], idx);
-end
+% Save masks
+dlmwrite([PATH_VEUSZ, 'contour_difficulty.csv'], stat_difficulty.mask);
+dlmwrite([PATH_VEUSZ, 'contour_agency.csv'], stat_agency.mask);
+dlmwrite([PATH_VEUSZ, 'contour_interaction.csv'], stat_interaction.mask);
 
 % Calculate effect sizes
 n_chans = numel(chanlocs);
@@ -314,18 +295,6 @@ end
 dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
 dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
 dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
-
-% Get cluster-times for agency
-sig = find([stat_agency.posclusters.prob] <= testalpha);
-agency_clust_times = {};
-for cl = 1 : numel(sig)
-    figure('Visible', 'off'); clf;
-    idx = stat_agency.posclusterslabelmat == sig(cl);
-    idx_time = logical(mean(idx, 1));
-    agency_clust_times{cl} = erp_times(idx_time);
-end
-
-
 
 % Save lineplots at Fz
 dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_easy_accu(:, 11, :)), 1);...
@@ -355,7 +324,7 @@ dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
 clim = [-0.05, 0.3];
-tpoints = [220, 570, 700, 860, 1100];
+tpoints = [550, 900, 1400];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
@@ -368,7 +337,7 @@ end
 
 % Plot effect size topos at selected time points for difficulty
 clim = [-0.05, 0.3];
-tpoints = [120, 220, 420, 700, 1100];
+tpoints = [120, 420, 1600];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
