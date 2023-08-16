@@ -125,14 +125,22 @@ for s = 1 : length(subject_list)
                 continue;
 
             end
+
+        % If no flip block
+        else
+
+            % Not a good trial...
+            EEG.trialinfo(e, 12) = -1;
+            EEG.trialinfo(e, 13) = -1;
+
         end
     end
     
     % Get trial-indices of conditions
-    idx_easy_asis = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 0;
-    idx_easy_flip = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 1;
-    idx_hard_asis = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 0;
-    idx_hard_flip = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 1;
+    idx_easy_asis = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
+    idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
+    idx_hard_asis = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
+    idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
     
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_easy_asis(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_easy_asis)), 3);
@@ -143,7 +151,7 @@ for s = 1 : length(subject_list)
 end
 
 % Select frontal channels
-frontal_channel_idx = [65, 15, 16, 19, 20];
+frontal_channel_idx = [65, 15];
 
 % Calculate frontal ERPs. Data is then subject x times dimensionality.
 erp_frontal_easy_asis = squeeze(mean(erp_easy_asis(:, frontal_channel_idx, :), 2));

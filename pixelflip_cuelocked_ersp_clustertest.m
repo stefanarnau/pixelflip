@@ -491,21 +491,21 @@ if ismember('part3', to_execute)
         subject = subject_list{s};
 
         % Load ersp data
-        load([PATH_TF_DATA, subject, '_itpc_easy_accu.mat']);
-        load([PATH_TF_DATA, subject, '_itpc_easy_flip.mat']);
-        load([PATH_TF_DATA, subject, '_itpc_hard_accu.mat']);
-        load([PATH_TF_DATA, subject, '_itpc_hard_flip.mat']);
+        load([PATH_TF_DATA, subject, '_ersp_easy_accu.mat']);
+        load([PATH_TF_DATA, subject, '_ersp_easy_flip.mat']);
+        load([PATH_TF_DATA, subject, '_ersp_hard_accu.mat']);
+        load([PATH_TF_DATA, subject, '_ersp_hard_flip.mat']);
 
         % get dims
-        [n_channels, n_freqs, n_times] = size(itpc_easy_accu);
+        [n_channels, n_freqs, n_times] = size(ersp_easy_accu);
 
         % Get average traces
-        idx_chan = [20];
-        idx_freq = tf_freqs >= 4 & tf_freqs <= 7;
-        ave_traces(1, :) = ave_traces(1, :) + squeeze(mean(itpc_easy_accu(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(2, :) = ave_traces(2, :) + squeeze(mean(itpc_easy_flip(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(3, :) = ave_traces(3, :) + squeeze(mean(itpc_hard_accu(idx_chan, idx_freq, :), [1, 2]))';
-        ave_traces(4, :) = ave_traces(4, :) + squeeze(mean(itpc_hard_flip(idx_chan, idx_freq, :), [1, 2]))';
+        idx_chan = [65, 15, 16, 19, 20];
+        idx_freq = tf_freqs >= 4 & tf_freqs <= 5.5;
+        ave_traces(1, :) = ave_traces(1, :) + squeeze(mean(ersp_easy_accu(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(2, :) = ave_traces(2, :) + squeeze(mean(ersp_easy_flip(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(3, :) = ave_traces(3, :) + squeeze(mean(ersp_hard_accu(idx_chan, idx_freq, :), [1, 2]))';
+        ave_traces(4, :) = ave_traces(4, :) + squeeze(mean(ersp_hard_flip(idx_chan, idx_freq, :), [1, 2]))';
 
     end
 

@@ -4,7 +4,7 @@ clear all;
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_RATINGS     = '/mnt/data_dump/pixelflip/veusz/subjecctive_ratings/';  
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_sequential/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_correlations/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -65,7 +65,9 @@ for s = 1 : length(subject_list)
     % 08: color_pressed
     % 09: feedback_accuracy
     % 10: feedback_color
-    % 11: accuracy  
+    % 11: accuracy
+    % 12: previous flipped
+    % 13: previous difficulty
 
     % Loop epochs
     for e = 1 : size(EEG.trialinfo, 1)
@@ -133,8 +135,8 @@ for s = 1 : length(subject_list)
     end
     
     % Get trial-indices of conditions
-    idx_asis = EEG.trialinfo(:, 12) == 0;
-    idx_flip = EEG.trialinfo(:, 12) == 1;
+    idx_asis = EEG.trialinfo(:, 3) == 0;
+    idx_flip = EEG.trialinfo(:, 3) == 1;
     
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_asis(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_asis)), 3);
@@ -286,8 +288,7 @@ end
 GA_diff = ft_timelockgrandaverage(cfg, GA{1, :});
 
 
-design = T.moti_accu - T.moti_flip;
-
+% Correlation motivation
 cfg.statistic = 'ft_statfun_correlationT';
 cfg.alpha = 0.025;
 cfg.neighbours = neighbours;
@@ -300,65 +301,45 @@ cfg.clusterstatistic = 'maxsum';
 cfg.numrandomization = 1000;
 cfg.computecritval = 'yes';
 cfg.ivar = 1;
-cfg.design = design;
+cfg.design = T.focus_accu - T.focus_flip;
 
 % The test
 [stat] = ft_timelockstatistics(cfg, GA_diff);
 
 % Save mask and rho
-dlmwrite([PATH_VEUSZ, 'rho.csv'], stat.rho);
-dlmwrite([PATH_VEUSZ, 'contour_correl.csv'], stat.mask);
+dlmwrite([PATH_VEUSZ, 'rho_motivation.csv'], stat.rho);
+dlmwrite([PATH_VEUSZ, 'mask:motivation.csv'], stat.mask);
 
-aa = bb;
+figure()
+contourf( erp_times,[1 : 65], stat.rho, 50, 'linecolor','none')
+colorbar()
+hold on
+contour( erp_times,[1 : 65], stat.mask, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap('jet')
 
-% Testparams
-testalpha  = 0.05;
-voxelalpha  = 0.01;
-nperm = 1000;
-
-% Set config
-cfg = [];
-cfg.tail             = 1;
-cfg.statistic        = 'depsamplesFmultivariate';
-cfg.alpha            = testalpha;
-cfg.neighbours       = neighbours;
-cfg.minnbchan        = 2;
-cfg.method           = 'montecarlo';
-cfg.correctm         = 'cluster';
-cfg.clustertail      = 1;
-cfg.clusteralpha     = voxelalpha;
+% Correlation motivation
+cfg.statistic = 'ft_statfun_correlationT';
+cfg.alpha = 0.025;
+cfg.neighbours = neighbours;
+cfg.minnbchan = 2;
+cfg.method = 'montecarlo';
+cfg.correctm = 'cluster';
+cfg.clustertail = 0;
+cfg.clusteralpha = 0.05;
 cfg.clusterstatistic = 'maxsum';
-cfg.numrandomization = nperm;
-cfg.computecritval   = 'yes'; 
-cfg.ivar             = 1;
-cfg.uvar             = 2;
+cfg.numrandomization = 1000;
+cfg.computecritval = 'yes';
+cfg.ivar = 1;
+cfg.design = T.mw_accu - T.mw_flip;
 
-% Set up design
-n_subjects = length(subject_list);
-design = zeros(2, n_subjects * 2);
-design(1, :) = [ones(1, n_subjects), 2 * ones(1, n_subjects)];
-design(2, :) = [1 : n_subjects, 1 : n_subjects];
-cfg.design = design;
+% The test
+[stat] = ft_timelockstatistics(cfg, GA_diff);
 
-% The tests
-[stat_agency] = ft_timelockstatistics(cfg, GA_asis, GA_flip);
+% Save mask and rho
+dlmwrite([PATH_VEUSZ, 'rho_motivation.csv'], stat.rho);
+dlmwrite([PATH_VEUSZ, 'mask:motivation.csv'], stat.mask);
 
-% Save masks
-dlmwrite([PATH_VEUSZ, 'contour_agency.csv'], stat_agency.mask);
-
-
-% Calculate effect sizes
-n_chans = numel(chanlocs);
-apes_agency      = [];
-df_effect = 1;
-for ch = 1 : n_chans
-    petasq = (squeeze(stat_agency.stat(ch, :)) * df_effect) ./ ((squeeze(stat_agency.stat(ch, :)) * df_effect) + (n_subjects - 1));
-    apes_agency(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
-end
-
-% Save effect sizes
-dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
-
+aa=bb
 % Save lineplots at Fz
 dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_asis(:, 11, :)), 1);...
                                              mean(squeeze(erp_flip(:, 11, :)), 1)]);
@@ -377,7 +358,7 @@ dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'], [mean(squeeze(erp_asis(:, 57, :)), 1
 % Save erp-times
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
-% Plot effect size topos at selected time points for agency
+% Plot topos at selected time points for agency
 clim = [-0.05, 0.3];
 tpoints = [200, 500, 800];
 for t = 1 : length(tpoints)

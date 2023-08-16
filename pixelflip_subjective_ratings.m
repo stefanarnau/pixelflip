@@ -18,6 +18,9 @@ T = renamevars(T, ["Frage1", "Frage2", "Frage3", "Frage4", "Frage5", "Frage6", "
 % Exclude age outliers
 T(T.age > 35, :) = [];
 
+% Save table
+save([PATH_OUT, 'table_ratings.mat'], 'T');
+
 % T-tests
 [focus_sig, focus_p, focus_ci, focus_stat] = ttest(T.focus_accu, T.focus_flip);
 [moti_sig, moti_p, moti_ci, moti_stat] = ttest(T.moti_accu, T.moti_flip);
