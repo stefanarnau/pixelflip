@@ -137,10 +137,10 @@ for s = 1 : length(subject_list)
     end
     
     % Get trial-indices of conditions
-    idx_easy_asis = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
-    idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
-    idx_hard_asis = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
-    idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
+    idx_easy_asis = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 0;
+    idx_easy_flip = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 1;
+    idx_hard_asis = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 0;
+    idx_hard_flip = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 1;
     
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_easy_asis(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_easy_asis)), 3);
@@ -175,7 +175,7 @@ plot(erp_times, mean(erp_frontal_easy_flip, 1), 'k:', 'LineWidth', 2)
 plot(erp_times, mean(erp_frontal_hard_asis, 1), 'r-', 'LineWidth', 2)
 plot(erp_times, mean(erp_frontal_hard_flip, 1), 'r:', 'LineWidth', 2)
 legend({'easy post non-flip', 'easy post flip', 'hard post non-flip', 'hard post flip'})
-title('frontal channels')
+title('Fz FCz FC1 FC2 F1 F2')
 xline([0, 1200])
 ylims = [-5, 3];
 ylim(ylims)
