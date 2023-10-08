@@ -149,8 +149,8 @@ if ismember('part1', to_execute)
         rt_flip0_easy_post0 = nanmean(EEG.trialinfo(idx_flip0_easy_post0 & idx_correct, 7));
         rt_flip0_hard_post0 = nanmean(EEG.trialinfo(idx_flip0_hard_post0 & idx_correct, 7));
         rt_flip1_easy_post0 = nanmean(EEG.trialinfo(idx_flip1_easy_post0 & idx_correct, 7));
-        rt_flip1_easy_post1 = nanmean(EEG.trialinfo(idx_flip1_easy_post1 & idx_correct, 7));
         rt_flip1_hard_post0 = nanmean(EEG.trialinfo(idx_flip1_hard_post0 & idx_correct, 7));
+        rt_flip1_easy_post1 = nanmean(EEG.trialinfo(idx_flip1_easy_post1 & idx_correct, 7));
         rt_flip1_hard_post1 = nanmean(EEG.trialinfo(idx_flip1_hard_post1 & idx_correct, 7));
         rt_all(s, :) = [rt_flip0_easy_post0,...
                         rt_flip0_hard_post0,...
@@ -205,18 +205,15 @@ if ismember('part1', to_execute)
     p = [P1, P2, P3];
     p_corr = bonf_holm(p, 0.05);
 
-
-    aa=bb
-
     % Save behavioral data for veusz
-    rt_mean = mean(rts_correct, 1);
-    rt_sd = std(rts_correct, [], 1);
-    rt_out = [rt_mean(1), rt_sd(1), rt_mean(3), rt_sd(3); rt_mean(2), rt_sd(2), rt_mean(4), rt_sd(4)];
+    rt_mean = mean(rt_all, 1);
+    rt_sd = std(rt_all, [], 1);
+    rt_out = [rt_mean(1), rt_sd(1), rt_mean(3), rt_sd(3), rt_mean(5), rt_sd(5); rt_mean(2), rt_sd(2), rt_mean(4), rt_sd(4), rt_mean(6), rt_sd(6)];
     dlmwrite([PATH_OUT, 'rt_veusz.csv'], rt_out, 'delimiter', '\t');
 
     acc_mean = mean(acc_all, 1);
     acc_sd = std(acc_all, [], 1);
-    acc_out = [acc_mean(1), acc_sd(1), acc_mean(3), acc_sd(3); acc_mean(2), acc_sd(2), acc_mean(4), acc_sd(4)];
+    acc_out = [acc_mean(1), acc_sd(1), acc_mean(3), acc_sd(3), acc_mean(5), acc_sd(5); acc_mean(2), acc_sd(2), acc_mean(4), acc_sd(4), acc_mean(6), acc_sd(6)];
     dlmwrite([PATH_OUT, 'acc_veusz.csv'], acc_out, 'delimiter', '\t');
 
 end % End part1

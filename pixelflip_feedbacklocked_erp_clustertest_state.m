@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_sequence/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/feedback_erp_state/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -24,22 +24,22 @@ addpath(ft_path);
 ft_defaults;
 
 % Load info
-EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
+EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1800;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1000;
 erp_times = EEG.times(erp_times_idx);
 
 % Get chanlocs
 chanlocs = EEG.chanlocs;
 
 % Matrices to collect data. Dimensionality: subjects x channels x times
-erp_flip0_easy_post0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_flip0_hard_post0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_flip1_easy_post0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_flip1_hard_post0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_flip1_easy_post1 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_flip1_hard_post1 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip0_easy_flip0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip0_hard_flip0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip1_easy_flip0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip1_hard_flip0 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip1_easy_flip1 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
+erp_flip1_hard_flip1 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
 
 % Loop subjects
 ids = [];
@@ -52,7 +52,8 @@ for s = 1 : length(subject_list)
     ids(s) = str2num(subject(3 : 4));
 
     % Load subject data. EEG data has dimensionality channels x times x trials
-    EEG = pop_loadset('filename',    [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+    EEG = pop_loadset('filename',    [subject, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+
 
     % Trialinfo columns:
     % 01: trial_nr
@@ -133,20 +134,20 @@ for s = 1 : length(subject_list)
     end
     
     % Get trial-indices of conditions
-    idx_flip0_easy_post0 = EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 0;
-    idx_flip0_hard_post0 = EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 1;
-    idx_flip1_easy_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
-    idx_flip1_hard_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
-    idx_flip1_easy_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
-    idx_flip1_hard_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
+    idx_flip0_easy_flip0 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 0;
+    idx_flip0_hard_flip0 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 1;
+    idx_flip1_easy_flip0 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 5) == 0;
+    idx_flip1_hard_flip0 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 5) == 0;
+    idx_flip1_easy_flip1 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 5) == 1;
+    idx_flip1_hard_flip1 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 5) == 1;
 
     % Calculate subject ERPs by averaging across trials for each condition.
-    erp_flip0_easy_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_easy_post0)), 3);
-    erp_flip0_hard_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_hard_post0)), 3);
-    erp_flip1_easy_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_post0)), 3);
-    erp_flip1_hard_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_post0)), 3);
-    erp_flip1_easy_post1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_post1)), 3);
-    erp_flip1_hard_post1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_post1)), 3);  
+    erp_flip0_easy_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_easy_flip0)), 3);
+    erp_flip0_hard_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_hard_flip0)), 3);
+    erp_flip1_easy_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_flip0)), 3);
+    erp_flip1_hard_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip0)), 3);
+    erp_flip1_easy_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_flip1)), 3);
+    erp_flip1_hard_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip1)), 3);   
 
 end
 
@@ -232,12 +233,12 @@ for ch = 1 : length(chanlocs)
 end
 
 % Install new order
-erp_flip0_easy_post0 = erp_flip0_easy_post0(:, new_order_idx, :);
-erp_flip0_hard_post0 = erp_flip0_hard_post0(:, new_order_idx, :);
-erp_flip1_easy_post0 = erp_flip1_easy_post0(:, new_order_idx, :);
-erp_flip1_hard_post0 = erp_flip1_hard_post0(:, new_order_idx, :);
-erp_flip1_easy_post1 = erp_flip1_easy_post1(:, new_order_idx, :);
-erp_flip1_hard_post1 = erp_flip1_hard_post1(:, new_order_idx, :);
+erp_flip0_easy_flip0 = erp_flip0_easy_flip0(:, new_order_idx, :);
+erp_flip0_hard_flip0 = erp_flip0_hard_flip0(:, new_order_idx, :);
+erp_flip1_easy_flip0 = erp_flip1_easy_flip0(:, new_order_idx, :);
+erp_flip1_hard_flip0 = erp_flip1_hard_flip0(:, new_order_idx, :);
+erp_flip1_easy_flip1 = erp_flip1_easy_flip1(:, new_order_idx, :);
+erp_flip1_hard_flip1 = erp_flip1_hard_flip1(:, new_order_idx, :);
 chanlocs = chanlocs(new_order_idx);
 
 % Restructure coordinates
@@ -269,13 +270,12 @@ ga_template.dimord = 'chan_time';
 ga_template.label = chanlabs;
 ga_template.time = erp_times;
 
-
-% ############################### flip-postnoflip vs. flip-postflip ###########################################
+% ############################### noflip vs. flip-postnoflip ###########################################
 
 % GA struct easy
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip1_easy_post1(s, :, :)) + squeeze(erp_flip1_easy_post0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip0_easy_flip0(s, :, :)) + squeeze(erp_flip1_easy_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -284,7 +284,7 @@ GA_easy = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip1_hard_post1(s, :, :)) + squeeze(erp_flip1_hard_post0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip0_hard_flip0(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -293,7 +293,7 @@ GA_hard = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip1_easy_post0(s, :, :)) + squeeze(erp_flip1_hard_post0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip0_easy_flip0(s, :, :)) + squeeze(erp_flip0_hard_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -302,7 +302,7 @@ GA_noflip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip1_easy_post1(s, :, :)) + squeeze(erp_flip1_hard_post1(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip1_easy_flip0(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -311,7 +311,7 @@ GA_flip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_flip1_hard_post0(s, :, :)) - squeeze(erp_flip1_easy_post0(s, :, :));
+    chan_time_data = squeeze(erp_flip0_hard_flip0(s, :, :)) - squeeze(erp_flip0_easy_flip0(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -320,7 +320,7 @@ GA_interaction_noflip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_flip1_hard_post1(s, :, :)) - squeeze(erp_flip1_easy_post1(s, :, :));
+    chan_time_data = squeeze(erp_flip1_hard_flip0(s, :, :)) - squeeze(erp_flip1_easy_flip0(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -355,6 +355,7 @@ design(1, :) = [ones(1, n_subjects), 2 * ones(1, n_subjects)];
 design(2, :) = [1 : n_subjects, 1 : n_subjects];
 cfg.design = design;
 
+
 % The tests
 [stat_difficulty]  = ft_timelockstatistics(cfg, GA_easy, GA_hard);
 [stat_agency]      = ft_timelockstatistics(cfg, GA_noflip, GA_flip);
@@ -386,36 +387,36 @@ dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
 dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
 
 % Save lineplots at Fz
-dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post1(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post1(:, 11, :)), 1)]);
+dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip0_hard_flip0(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_flip0(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_flip0(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_flip1(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_flip1(:, 11, :)), 1)]);
 
 % Save lineplots at FCz
-dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip0_hard_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post1(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post1(:, 20, :)), 1)]);
+dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip0_hard_flip0(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip0(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip0(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip1(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip1(:, 20, :)), 1)]);
 
 % Save lineplots at Pz
-dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post1(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post1(:, 48, :)), 1)]);
+dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip0_hard_flip0(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_flip0(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_flip0(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_flip1(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_flip1(:, 48, :)), 1)]);
 
 % Save lineplots at POz
-dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip0_hard_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post1(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post1(:, 57, :)), 1)]);
+dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip0_hard_flip0(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip0(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip0(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip1(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip1(:, 57, :)), 1)]);
 
 % Save erp-times
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);

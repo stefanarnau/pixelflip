@@ -137,12 +137,16 @@ for s = 1 : length(subject_list)
     idx_flip0_hard_post0 = EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 1;
     idx_flip1_easy_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
     idx_flip1_hard_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
-    
+    idx_flip1_easy_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
+    idx_flip1_hard_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
+
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_flip0_easy_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_easy_post0)), 3);
     erp_flip0_hard_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_hard_post0)), 3);
     erp_flip1_easy_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_post0)), 3);
     erp_flip1_hard_post0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_post0)), 3);
+    erp_flip1_easy_post1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_post1)), 3);
+    erp_flip1_hard_post1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_post1)), 3);   
 
 end
 
@@ -232,6 +236,8 @@ erp_flip0_easy_post0 = erp_flip0_easy_post0(:, new_order_idx, :);
 erp_flip0_hard_post0 = erp_flip0_hard_post0(:, new_order_idx, :);
 erp_flip1_easy_post0 = erp_flip1_easy_post0(:, new_order_idx, :);
 erp_flip1_hard_post0 = erp_flip1_hard_post0(:, new_order_idx, :);
+erp_flip1_easy_post1 = erp_flip1_easy_post1(:, new_order_idx, :);
+erp_flip1_hard_post1 = erp_flip1_hard_post1(:, new_order_idx, :);
 chanlocs = chanlocs(new_order_idx);
 
 % Restructure coordinates
@@ -383,52 +389,72 @@ dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
 dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 11, :)), 1);...
                                              mean(squeeze(erp_flip0_hard_post0(:, 11, :)), 1);...
                                              mean(squeeze(erp_flip1_easy_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 11, :)), 1)]);
+                                             mean(squeeze(erp_flip1_hard_post0(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_post1(:, 11, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_post1(:, 11, :)), 1)]);
 
 % Save lineplots at FCz
 dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 20, :)), 1);...
                                               mean(squeeze(erp_flip0_hard_post0(:, 20, :)), 1);...
                                               mean(squeeze(erp_flip1_easy_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 20, :)), 1)]);
+                                              mean(squeeze(erp_flip1_hard_post0(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_post1(:, 20, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_post1(:, 20, :)), 1)]);
 
 % Save lineplots at Pz
 dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 48, :)), 1);...
                                              mean(squeeze(erp_flip0_hard_post0(:, 48, :)), 1);...
                                              mean(squeeze(erp_flip1_easy_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 48, :)), 1)]);
+                                             mean(squeeze(erp_flip1_hard_post0(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_easy_post1(:, 48, :)), 1);...
+                                             mean(squeeze(erp_flip1_hard_post1(:, 48, :)), 1)]);
 
 % Save lineplots at POz
 dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 57, :)), 1);...
                                               mean(squeeze(erp_flip0_hard_post0(:, 57, :)), 1);...
                                               mean(squeeze(erp_flip1_easy_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 57, :)), 1)]);
+                                              mean(squeeze(erp_flip1_hard_post0(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_post1(:, 57, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_post1(:, 57, :)), 1)]);
 
 % Save erp-times
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
-clim = [-0.05, 0.3];
+clim = [-0.3, 0.3];
 tpoints = [550, 900, 1400];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
     pd = mean(apes_agency(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(flipud(bone));
+    colormap(jet);
     caxis(clim);
     saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
 % Plot effect size topos at selected time points for difficulty
-clim = [-0.05, 0.3];
+clim = [-0.3, 0.3];
 tpoints = [120, 420, 1600];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
     pd = mean(apes_difficulty(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(flipud(bone));
+    colormap(jet);
     caxis(clim);
     saveas(gcf, [PATH_VEUSZ, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
+% Plot effect size topos at selected time points for interaction
+clim = [-0.3, 0.3];
+tpoints = [150, 450, 1700];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_interaction(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(jet);
+    caxis(clim);
+    saveas(gcf, [PATH_VEUSZ, 'topo_interaction_', num2str(tpoints(t)), 'ms', '.png']);
+end
