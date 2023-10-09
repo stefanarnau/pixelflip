@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/feedback_erp_state/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/feedback_erp_sequence/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -270,12 +270,12 @@ ga_template.dimord = 'chan_time';
 ga_template.label = chanlabs;
 ga_template.time = erp_times;
 
-% ############################### noflip-block vs. noflip ###########################################
+% ############################### noflip vs. flip ###########################################
 
 % GA struct easy
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip0_easy_flip0(s, :, :)) + squeeze(erp_flip1_easy_flip0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip1_easy_flip1(s, :, :)) + squeeze(erp_flip1_easy_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -284,7 +284,7 @@ GA_easy = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip0_hard_flip0(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip1_hard_flip1(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -293,7 +293,7 @@ GA_hard = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip0_easy_flip0(s, :, :)) + squeeze(erp_flip0_hard_flip0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip1_easy_flip0(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -302,7 +302,7 @@ GA_noflip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(erp_flip1_easy_flip0(s, :, :)) + squeeze(erp_flip1_hard_flip0(s, :, :))) ./ 2;
+    chan_time_data = (squeeze(erp_flip1_easy_flip1(s, :, :)) + squeeze(erp_flip1_hard_flip1(s, :, :))) ./ 2;
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -311,7 +311,7 @@ GA_flip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_flip0_hard_flip0(s, :, :)) - squeeze(erp_flip0_easy_flip0(s, :, :));
+    chan_time_data = squeeze(erp_flip1_hard_flip0(s, :, :)) - squeeze(erp_flip1_easy_flip0(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -320,7 +320,7 @@ GA_interaction_noflip = ft_timelockgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(erp_flip1_hard_flip0(s, :, :)) - squeeze(erp_flip1_easy_flip0(s, :, :));
+    chan_time_data = squeeze(erp_flip1_hard_flip1(s, :, :)) - squeeze(erp_flip1_easy_flip1(s, :, :));
     ga_template.avg = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -404,11 +404,11 @@ dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(
 
 % Save lineplots at Cz
 dlmwrite([PATH_VEUSZ, 'lineplots_cz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_flip0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_flip0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_flip0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_flip1(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_flip1(:, 29, :)), 1)]);
+                                              mean(squeeze(erp_flip0_hard_flip0(:, 29, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip0(:, 29, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip0(:, 29, :)), 1);...
+                                              mean(squeeze(erp_flip1_easy_flip1(:, 29, :)), 1);...
+                                              mean(squeeze(erp_flip1_hard_flip1(:, 29, :)), 1)]);
 
 % Save lineplots at CPz
 dlmwrite([PATH_VEUSZ, 'lineplots_cpz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(:, 38, :)), 1);...
@@ -433,13 +433,12 @@ dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_flip0(
                                               mean(squeeze(erp_flip1_easy_flip1(:, 57, :)), 1);...
                                               mean(squeeze(erp_flip1_hard_flip1(:, 57, :)), 1)]);
 
-
 % Save erp-times
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
 clim = [-0.3, 0.3];
-tpoints = [100, 280, 800];
+tpoints = [250, 500, 650];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
@@ -452,7 +451,7 @@ end
 
 % Plot effect size topos at selected time points for difficulty
 clim = [-0.3, 0.3];
-tpoints = [0, 300, 500];
+tpoints = [0, 250, 450];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
@@ -465,7 +464,7 @@ end
 
 % Plot effect size topos at selected time points for interaction
 clim = [-0.3, 0.3];
-tpoints = [300, 600, 700];
+tpoints = [250, 550, 650];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
