@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_state/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_ersp_state/';  
 PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
 
 % Subject list
@@ -28,9 +28,9 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
 % Set complex Morlet wavelet parameters
-n_frq = 30;
-frqrange = [2, 20];
-tfres_range = [600, 300];
+n_frq = 50;
+frqrange = [2, 30];
+tfres_range = [600, 200];
 
 % Set wavelet time
 wtime = -2 : 1 / EEG.srate : 2;
@@ -77,7 +77,7 @@ for frq = 1 : length(tf_freqs)
 end
 
 % Define time window of analysis
-prune_times = [-500, 2200]; 
+prune_times = [-500, 1800]; 
 tf_times = EEG.times(dsearchn(EEG.times', prune_times(1)) : dsearchn(EEG.times', prune_times(2)));
 
 % Get chanlocs
@@ -142,16 +142,16 @@ for s = 1 : length(subject_list)
                 end
 
                 % Check if previous incorrect
-                if EEG.trialinfo(idx_prev, 11) ~= 1
+                % if EEG.trialinfo(idx_prev, 11) ~= 1
 
-                    % Not a good trial...
-                    EEG.trialinfo(e, 12) = -1;
-                    EEG.trialinfo(e, 13) = -1;
+                %     % Not a good trial...
+                %     EEG.trialinfo(e, 12) = -1;
+                %     EEG.trialinfo(e, 13) = -1;
 
-                    % Next
-                    continue;
+                %     % Next
+                %     continue;
 
-                end
+                % end
 
                 % Check if previous was flipped
                 if EEG.trialinfo(idx_prev, 5) == 1
@@ -222,7 +222,7 @@ for s = 1 : length(subject_list)
         end
         
         % Cut edges
-        powcube = powcube(:, dsearchn(EEG.times', -500) : dsearchn(EEG.times', 2200), :);
+        powcube = powcube(:, dsearchn(EEG.times', prune_times(1)) : dsearchn(EEG.times', prune_times(2)), :);
 
         % Get condition general baseline values
         ersp_bl = [-500, -200];
@@ -247,12 +247,12 @@ end
 save([PATH_TF_DATA, 'chanlocs.mat'], 'chanlocs');
 save([PATH_TF_DATA, 'tf_freqs.mat'], 'tf_freqs');
 save([PATH_TF_DATA, 'tf_times.mat'], 'tf_times');
-save([PATH_TF_DATA, subject, 'ersp_flip0_easy_post0.mat'], 'ersp_flip0_easy_post0');
-save([PATH_TF_DATA, subject, 'ersp_flip0_hard_post0.mat'], 'ersp_flip0_hard_post0');
-save([PATH_TF_DATA, subject, 'ersp_flip1_easy_post0.mat'], 'ersp_flip1_easy_post0');
-save([PATH_TF_DATA, subject, 'ersp_flip1_hard_post0.mat'], 'ersp_flip1_hard_post0');
-save([PATH_TF_DATA, subject, 'ersp_flip1_easy_post1.mat'], 'ersp_flip1_easy_post1');
-save([PATH_TF_DATA, subject, 'ersp_flip1_hard_post1.mat'], 'ersp_flip1_hard_post1');
+save([PATH_TF_DATA, 'ersp_flip0_easy_post0.mat'], 'ersp_flip0_easy_post0');
+save([PATH_TF_DATA, 'ersp_flip0_hard_post0.mat'], 'ersp_flip0_hard_post0');
+save([PATH_TF_DATA, 'ersp_flip1_easy_post0.mat'], 'ersp_flip1_easy_post0');
+save([PATH_TF_DATA, 'ersp_flip1_hard_post0.mat'], 'ersp_flip1_hard_post0');
+save([PATH_TF_DATA, 'ersp_flip1_easy_post1.mat'], 'ersp_flip1_easy_post1');
+save([PATH_TF_DATA, 'ersp_flip1_hard_post1.mat'], 'ersp_flip1_hard_post1');
 
 % The order of things
 new_order_labels = {...
@@ -464,7 +464,116 @@ cfg.design = design;
 [stat_agency]      = ft_freqstatistics(cfg, GA_noflip, GA_flip);
 [stat_interaction] = ft_freqstatistics(cfg, GA_interaction_noflip, GA_interaction_flip);
 
+% Save cluster structs
+save([PATH_TF_DATA 'stat_difficulty.mat'], 'stat_difficulty');
+save([PATH_TF_DATA 'stat_agency.mat'], 'stat_agency');
+save([PATH_TF_DATA 'stat_interaction.mat'], 'stat_interaction');
+
+% Calculate and save effect sizes
+adjpetasq_difficulty = [];
+adjpetasq_agency = [];
+adjpetasq_interaction = [];
+for ch = 1 : EEG.nbchan
+    petasq = (squeeze(stat_difficulty.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_difficulty.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    adjpetasq_difficulty(ch, :, :) = adj_petasq;
+
+    petasq = (squeeze(stat_agency.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_agency.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    adjpetasq_agency(ch, :, :) = adj_petasq;
+
+    petasq = (squeeze(stat_interaction.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_interaction.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    adjpetasq_interaction(ch, :, :) = adj_petasq;
+end
+
+% Save effect sizes
+save([PATH_TF_DATA, 'adjpetasq_difficulty.mat'], 'adjpetasq_difficulty');
+save([PATH_TF_DATA, 'adjpetasq_agency.mat'], 'adjpetasq_agency');
+save([PATH_TF_DATA, 'adjpetasq_interaction.mat'], 'adjpetasq_interaction');
+
+% Plot some effect sizes
+figure()
+pd = squeeze(adjpetasq_agency(20, :, :));
+contourf(tf_times, tf_freqs, pd, 40, 'linecolor','none')
+clim([0, 0.5])
+colormap(hot)
+
+
+% Identify significant clusters
+clust_thresh = 0.05;
+clusts = struct();
+cnt = 0;
+stat_names = {'stat_difficulty', 'stat_agency', 'stat_interaction'};
+for s = 1 : numel(stat_names)
+    stat = eval(stat_names{s});
+    if ~isempty(stat.posclusters)
+        pos_idx = find([stat.posclusters(1, :).prob] < clust_thresh);
+        for c = 1 : numel(pos_idx)
+            cnt = cnt + 1;
+            clusts(cnt).testlabel = stat_names{s};
+            clusts(cnt).clustnum = cnt;
+            clusts(cnt).time = stat.time;
+            clusts(cnt).freq = stat.freq;
+            clusts(cnt).prob = stat.posclusters(1, pos_idx(c)).prob;
+            clusts(cnt).idx = stat.posclusterslabelmat == pos_idx(c);
+            clusts(cnt).stats = clusts(cnt).idx .* stat.stat;
+            clusts(cnt).chans_sig = find(logical(mean(clusts(cnt).idx, [2, 3])));
+        end
+    end
+end
+
+% Plot identified cluster
+clinecol = 'k';
+cmap = 'jet';
+for cnt = 1 : numel(clusts)
+
+    figure('Visible', 'off'); clf;
+
+    subplot(2, 2, 1)
+    pd = squeeze(sum(clusts(cnt).stats, 1));
+    contourf(clusts(cnt).time, clusts(cnt).freq, pd, 40, 'linecolor','none')
+    hold on
+    contour(clusts(cnt).time, clusts(cnt).freq, logical(squeeze(mean(clusts(cnt).idx, 1))), 1, 'linecolor', clinecol, 'LineWidth', 2)
+    colormap(cmap)
+    set(gca, 'xlim', [clusts(cnt).time(1), clusts(cnt).time(end)], 'clim', [-max(abs(pd(:))), max(abs(pd(:)))], 'YScale', 'lin', 'YTick', [4, 8, 12, 20])
+    colorbar;
+    title(['sum t across chans '], 'FontSize', 10)
+
+    subplot(2, 2, 2)
+    pd = squeeze(mean(clusts(cnt).idx, 1));
+    contourf(clusts(cnt).time, clusts(cnt).freq, pd, 40, 'linecolor','none')
+    hold on
+    contour(clusts(cnt).time, clusts(cnt).freq, logical(squeeze(mean(clusts(cnt).idx, 1))), 1, 'linecolor', clinecol, 'LineWidth', 2)
+    colormap(cmap)
+    set(gca, 'xlim', [clusts(cnt).time(1), clusts(cnt).time(end)], 'clim', [-1, 1], 'YScale', 'lin', 'YTick', [4, 8, 12, 20])
+    colorbar;
+    title(['proportion chans significant'], 'FontSize', 10)
+
+    subplot(2, 2, 3)
+    pd = squeeze(sum(clusts(cnt).stats, [2, 3]));
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(cmap)
+    set(gca, 'clim', [-max(abs(pd(:))), max(abs(pd(:)))])
+    colorbar;
+    title(['sum t per electrode'], 'FontSize', 10)
+
+    subplot(2, 2, 4)
+    pd = squeeze(mean(clusts(cnt).idx, [2, 3]));
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(cmap)
+    set(gca, 'clim', [-1, 1])
+    colorbar;
+    title(['proportion tf-points significant'], 'FontSize', 10)
+
+    saveas(gcf, [PATH_VEUSZ 'clustnum_' num2str(clusts(cnt).clustnum) '_' clusts(cnt).testlabel '.png']); 
+end
+
 aa=bb
+
+
+
+
 
 % Save masks
 dlmwrite([PATH_VEUSZ, 'contour_difficulty.csv'], stat_difficulty.mask);
