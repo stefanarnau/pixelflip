@@ -3,7 +3,7 @@ clear all;
 % PATH VARS
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-
+PATH_RESULTS     = '/mnt/data_dump/pixelflip/results_jana/';
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -19,10 +19,10 @@ addpath(PATH_EEGLAB);
 eeglab;
 
 % Load info
-EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
+EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1200;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1800;
 erp_times = EEG.times(erp_times_idx);
 
 %% ========================= CALCULATE ERPs ======================================================================================================================
@@ -137,10 +137,10 @@ for s = 1 : length(subject_list)
     end
     
     % Get trial-indices of conditions
-    idx_easy_asis = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 0;
-    idx_easy_flip = EEG.trialinfo(:, 13) == 0 & EEG.trialinfo(:, 12) == 1;
-    idx_hard_asis = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 0;
-    idx_hard_flip = EEG.trialinfo(:, 13) == 1 & EEG.trialinfo(:, 12) == 1;
+    idx_easy_asis = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 1;
+    idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 0;
+    idx_hard_asis = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 1;
+    idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 0;
     
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_easy_asis(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_easy_asis)), 3);
@@ -160,7 +160,7 @@ erp_frontal_hard_asis = squeeze(mean(erp_hard_asis(:, frontal_channel_idx, :), 2
 erp_frontal_hard_flip = squeeze(mean(erp_hard_flip(:, frontal_channel_idx, :), 2));
 
 % Define time window for CNV-parameterization
-cnv_times = [700, 900];
+cnv_times = [600, 1100];
 
 % Get cnv-time indices
 cnv_time_idx = erp_times >= cnv_times(1) & erp_times <= cnv_times(2);
@@ -174,12 +174,12 @@ hold on;
 plot(erp_times, mean(erp_frontal_easy_flip, 1), 'k:', 'LineWidth', 2)
 plot(erp_times, mean(erp_frontal_hard_asis, 1), 'r-', 'LineWidth', 2)
 plot(erp_times, mean(erp_frontal_hard_flip, 1), 'r:', 'LineWidth', 2)
-legend({'easy post non-flip', 'easy post flip', 'hard post non-flip', 'hard post flip'})
-title('Fz FCz FC1 FC2 F1 F2')
+legend({'easy non-flip', 'easy flip', 'hard non-flip', 'hard flip'})
+title('Fz FCz FC1 FC2')
 xline([0, 1200])
 ylims = [-5, 3];
 ylim(ylims)
-xlim([-200, 1200])
+xlim([-200, 1800])
 rectangle('Position', [cnv_times(1), ylims(1), cnv_times(2) - cnv_times(1), ylims(2) - ylims(1)], 'FaceColor',[0.5, 1, 0.5, 0.2], 'EdgeColor', 'none')
 
 % Average over subjects and cnv-times to plot topographies
@@ -200,7 +200,7 @@ topoplot(topo_easy_asis, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['easy asis'], 'FontSize', 10)
+title(['easy non-flip'], 'FontSize', 10)
 
 subplot(3, 2, 2)
 topoplot(topo_easy_flip, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
@@ -214,7 +214,7 @@ topoplot(topo_hard_asis, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare
 colormap('jet')
 set(gca, 'clim', [-3, 3])
 colorbar;
-title(['hard asis'], 'FontSize', 10)
+title(['hard non-flip'], 'FontSize', 10)
 
 subplot(3, 2, 4)
 topoplot(topo_hard_flip, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
@@ -235,7 +235,7 @@ topoplot(topo_reliability, EEG.chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsqua
 colormap('jet')
 set(gca, 'clim', [-1, 1])
 colorbar;
-title(['asis- flip'], 'FontSize', 10)
+title(['non-flip - flip'], 'FontSize', 10)
 
 %% ========================= STATISTICS ======================================================================================================================
 
@@ -252,4 +252,40 @@ within = table({'easy'; 'easy'; 'hard'; 'hard'}, {'asis'; 'flip'; 'asis'; 'flip'
 rm = fitrm(t, 'easy_asis-hard_flip~1', 'WithinDesign', within);
 anova_cnv = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
 anova_cnv
+
+% Convert to long format and save as csv
+res = [];
+counter = 0;
+for s = 1 : size(cnv_values, 1)
+
+    % Get subject id as string
+    subject = subject_list{s};
+
+    % Collect IDs as number
+    id = str2num(subject(3 : 4));
+
+    % Loop condition means
+    for cond = 1 : 4
+
+        counter = counter + 1;
+
+        % Set levels
+        if cond < 3
+            difficulty = 0;
+        else
+            difficulty = 1;
+        end
+        if mod(cond, 2) == 0
+            flip = 0;
+        else
+            flip = 1;
+        end
+
+        % Fill
+        res(counter, :) = [id, difficulty, flip, cnv_values(s, cond)];
+
+    end
+end
+
+writematrix(res, [PATH_RESULTS, 'cnv_values.csv']);
 

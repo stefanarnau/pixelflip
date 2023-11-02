@@ -4,6 +4,7 @@ clear all;
 % Path vars
 PATH_IN  = '/mnt/data_dump/pixelflip/4_subjective_ratings/';  
 PATH_OUT = '/mnt/data_dump/pixelflip/veusz/subjecctive_ratings/';  
+PATH_RESULTS     = '/mnt/data_dump/pixelflip/results_jana/';
 
 % The file
 fn = 'subjective_ratings_final.csv';
@@ -38,4 +39,6 @@ self_reports_out = [mean(T.focus_accu), std(T.focus_accu), mean(T.moti_accu), st
 % Save
 dlmwrite([PATH_OUT, 'self_reports_veusz.csv'], self_reports_out, 'delimiter', '\t');
 dlmwrite([PATH_OUT, 'xax12.csv'], [1, 2], 'delimiter', '\t');
+
+writetable(T, [PATH_RESULTS, 'subjective_ratings.csv']);
 

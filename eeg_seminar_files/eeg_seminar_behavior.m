@@ -3,9 +3,16 @@ clear all;
 % PATH VARS
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
+PATH_RESULTS     = '/mnt/data_dump/pixelflip/results_jana/';
 
 % Subject list
-subject_list = {'VP01', 'VP02', 'VP03', 'VP05', 'VP06', 'VP08', 'VP12', 'VP07', 'VP11', 'VP09', 'VP16', 'VP17', 'VP19'};
+subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
+                'VP11', 'VP12', 'VP13', 'VP14', 'VP15', 'VP16', 'VP17', 'VP18', 'VP19', 'VP20',...
+                'VP21', 'VP22', 'VP23', 'VP24', 'VP25', 'VP26', 'VP27', 'VP28', 'VP29', 'VP30',...
+                'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37', 'VP38', 'VP39', 'VP40'};
+
+% Exclude from analysis
+subject_list = setdiff(subject_list, {'VP07'}); % Age outlier
 
 % Init eeglab
 addpath(PATH_EEGLAB);
@@ -98,7 +105,6 @@ if ismember('part1', to_execute)
     anova_acc = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
     anova_acc
 
-
     % Perform rmANOVA for RT
     varnames = {'subject', 'easy_accu', 'easy_flip', 'hard_accu', 'hard_flip'};
     t = table(ids', rts_correct(:, 1), rts_correct(:, 2), rts_correct(:, 3), rts_correct(:, 4), 'VariableNames', varnames);
@@ -107,6 +113,42 @@ if ismember('part1', to_execute)
     anova_rt = ranova(rm, 'WithinModel', 'difficulty + reliability + difficulty*reliability');
     anova_rt
 
+
+    % Convert to long format and save as csv
+    res = [];
+    counter = 0;
+    for s = 1 : size(rts_correct, 1)
+
+        % Get subject id as string
+        subject = subject_list{s};
+
+        % Collect IDs as number
+        id = str2num(subject(3 : 4));
+
+        % Loop condition means
+        for cond = 1 : 4
+
+            counter = counter + 1;
+
+            % Set levels
+            if cond < 3
+                difficulty = 0;
+            else
+                difficulty = 1;
+            end
+            if mod(cond, 2) == 0
+                flip = 0;
+            else
+                flip = 1;
+            end
+
+            % Fill
+            res(counter, :) = [id, difficulty, flip, rts_correct(s, cond), acc_all(s, cond)];
+
+        end
+    end
+
+    writematrix(res, [PATH_RESULTS, 'behavior.csv']);
 
 
 end % End part1
