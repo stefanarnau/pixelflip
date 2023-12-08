@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_ersp_state/';  
+PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_ersp_sequence/';  
 PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
 
 % Subject list
@@ -28,8 +28,8 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
 % Set complex Morlet wavelet parameters
-n_frq = 50;
-frqrange = [3, 30];
+n_frq = 20;
+frqrange = [2, 30];
 tfres_range = [600, 200];
 
 % Set wavelet time
@@ -379,7 +379,7 @@ ga_template.time      = tf_times;
 % GA struct easy
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(ersp_flip0_easy_post0(s, :, :, :)) + squeeze(ersp_flip1_easy_post0(s, :, :, :))) ./ 2;
+    chan_time_data = (squeeze(ersp_flip1_easy_post0(s, :, :, :)) + squeeze(ersp_flip1_easy_post1(s, :, :, :))) ./ 2;
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -388,7 +388,7 @@ GA_easy = ft_freqgrandaverage(cfg, GA{1, :});
 % GA struct hard
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(ersp_flip0_hard_post0(s, :, :, :)) + squeeze(ersp_flip1_hard_post0(s, :, :, :))) ./ 2;
+    chan_time_data = (squeeze(ersp_flip1_hard_post0(s, :, :, :)) + squeeze(ersp_flip1_hard_post1(s, :, :, :))) ./ 2;
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -397,7 +397,7 @@ GA_hard = ft_freqgrandaverage(cfg, GA{1, :});
 % GA struct noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(ersp_flip0_easy_post0(s, :, :, :)) + squeeze(ersp_flip0_hard_post0(s, :, :, :))) ./ 2;
+    chan_time_data = (squeeze(ersp_flip1_easy_post0(s, :, :, :)) + squeeze(ersp_flip1_hard_post0(s, :, :, :))) ./ 2;
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -406,7 +406,7 @@ GA_noflip = ft_freqgrandaverage(cfg, GA{1, :});
 % GA struct flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = (squeeze(ersp_flip1_easy_post0(s, :, :, :)) + squeeze(ersp_flip1_hard_post0(s, :, :, :))) ./ 2;
+    chan_time_data = (squeeze(ersp_flip1_easy_post1(s, :, :, :)) + squeeze(ersp_flip1_hard_post1(s, :, :, :))) ./ 2;
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -415,7 +415,7 @@ GA_flip = ft_freqgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy noflip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(ersp_flip0_hard_post0(s, :, :, :)) - squeeze(ersp_flip0_easy_post0(s, :, :, :));
+    chan_time_data = squeeze(ersp_flip1_hard_post0(s, :, :, :)) - squeeze(ersp_flip1_easy_post0(s, :, :, :));
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
@@ -424,7 +424,7 @@ GA_interaction_noflip = ft_freqgrandaverage(cfg, GA{1, :});
 % GA struct hard minus easy flip
 GA = {};
 for s = 1 : length(subject_list)
-    chan_time_data = squeeze(ersp_flip1_hard_post0(s, :, :, :)) - squeeze(ersp_flip1_easy_post0(s, :, :, :));
+    chan_time_data = squeeze(ersp_flip1_hard_post1(s, :, :, :)) - squeeze(ersp_flip1_easy_post1(s, :, :, :));
     ga_template.powspctrm = chan_time_data;
     GA{s} = ga_template;
 end 
