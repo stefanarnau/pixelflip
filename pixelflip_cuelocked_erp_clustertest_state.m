@@ -385,6 +385,32 @@ dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
 dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
 dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
 
+% Plot masks
+figure()
+subplot(2, 2, 1)
+contourf(erp_times,[1:65], apes_difficulty, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_difficulty.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('difficulty')
+
+subplot(2, 2, 2)
+contourf(erp_times,[1:65], apes_agency, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_agency.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('agency')
+
+subplot(2, 2, 3)
+contourf(erp_times,[1:65], apes_interaction, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_interaction.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('interaction')
+
 % Save lineplots at Fz
 dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 11, :)), 1);...
                                              mean(squeeze(erp_flip0_hard_post0(:, 11, :)), 1);...
@@ -436,7 +462,7 @@ dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_post0(
 dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
 
 % Plot effect size topos at selected time points for agency
-clim = [-0.3, 0.3];
+c_lim = [-0.3, 0.3];
 tpoints = [550, 900, 1400];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
@@ -444,12 +470,12 @@ for t = 1 : length(tpoints)
     pd = mean(apes_agency(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
     colormap(jet);
-    caxis(clim);
+    caxis(c_lim);
     saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
 % Plot effect size topos at selected time points for difficulty
-clim = [-0.3, 0.3];
+c_lim = [-0.3, 0.3];
 tpoints = [120, 420, 1600];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
@@ -457,12 +483,12 @@ for t = 1 : length(tpoints)
     pd = mean(apes_difficulty(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
     colormap(jet);
-    caxis(clim);
+    caxis(c_lim);
     saveas(gcf, [PATH_VEUSZ, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
 % Plot effect size topos at selected time points for interaction
-clim = [-0.3, 0.3];
+c_lim = [-0.3, 0.3];
 tpoints = [150, 450, 1700];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
@@ -470,6 +496,6 @@ for t = 1 : length(tpoints)
     pd = mean(apes_interaction(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
     colormap(jet);
-    caxis(clim);
+    caxis(c_lim);
     saveas(gcf, [PATH_VEUSZ, 'topo_interaction_', num2str(tpoints(t)), 'ms', '.png']);
 end

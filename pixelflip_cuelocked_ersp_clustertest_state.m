@@ -28,8 +28,8 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
 % Set complex Morlet wavelet parameters
-n_frq = 50;
-frqrange = [3, 30];
+n_frq = 25;
+frqrange = [2, 30];
 tfres_range = [600, 200];
 
 % Set wavelet time
@@ -39,8 +39,11 @@ wtime = -2 : 1 / EEG.srate : 2;
 hz = linspace(0, EEG.srate, length(wtime));
 
 % Create wavelet frequencies and tapering Gaussian widths in temporal domain
-tf_freqs = logspace(log10(frqrange(1)), log10(frqrange(2)), n_frq);
-fwhmTs = logspace(log10(tfres_range(1)), log10(tfres_range(2)), n_frq);
+%tf_freqs = logspace(log10(frqrange(1)), log10(frqrange(2)), n_frq);
+%fwhmTs = logspace(log10(tfres_range(1)), log10(tfres_range(2)), n_frq);
+tf_freqs = linspace(frqrange(1), frqrange(2), n_frq);
+fwhmTs = linspace(tfres_range(1), tfres_range(2), n_frq);
+
 
 % Init matrices for wavelets
 cmw = zeros(length(tf_freqs), length(wtime));
@@ -242,6 +245,17 @@ for s = 1 : length(subject_list)
     end % end channel loop
 
 end
+
+% Prune again (after tf-decomposition)
+% prune_times = [-200, 1200];
+% time_idx = dsearchn(tf_times', prune_times(1)) : dsearchn(tf_times', prune_times(2));
+% tf_times = tf_times(time_idx);
+% ersp_flip0_easy_post0 = ersp_flip0_easy_post0(:, :, :, time_idx);
+% ersp_flip0_hard_post0 = ersp_flip0_hard_post0(:, :, :, time_idx);
+% ersp_flip1_easy_post0 = ersp_flip1_easy_post0(:, :, :, time_idx);
+% ersp_flip1_hard_post0 = ersp_flip1_hard_post0(:, :, :, time_idx);
+% ersp_flip1_easy_post1 = ersp_flip1_easy_post1(:, :, :, time_idx);
+% ersp_flip1_hard_post1 = ersp_flip1_hard_post1(:, :, :, time_idx);
 
 % Save shit
 save([PATH_TF_DATA, 'chanlocs.mat'], 'chanlocs');
@@ -569,12 +583,6 @@ for cnt = 1 : numel(clusts)
     saveas(gcf, [PATH_VEUSZ 'clustnum_' num2str(clusts(cnt).clustnum) '_' clusts(cnt).testlabel '.png']); 
 end
 
-aa=bb
-
-
-
-
-
 % Save masks
 dlmwrite([PATH_VEUSZ, 'contour_difficulty.csv'], stat_difficulty.mask);
 dlmwrite([PATH_VEUSZ, 'contour_agency.csv'], stat_agency.mask);
@@ -587,104 +595,15 @@ apes_agency      = [];
 apes_interaction = [];
 df_effect = 1;
 for ch = 1 : n_chans
-    petasq = (squeeze(stat_difficulty.stat(ch, :)) * df_effect) ./ ((squeeze(stat_difficulty.stat(ch, :)) * df_effect) + (n_subjects - 1));
-    apes_difficulty(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
-    petasq = (squeeze(stat_agency.stat(ch, :)) * df_effect) ./ ((squeeze(stat_agency.stat(ch, :)) * df_effect) + (n_subjects - 1));
-    apes_agency(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
-    petasq = (squeeze(stat_interaction.stat(ch, :)) * df_effect) ./ ((squeeze(stat_interaction.stat(ch, :)) * df_effect) + (n_subjects - 1));
-    apes_interaction(ch, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
+    petasq = (squeeze(stat_difficulty.stat(ch, :, :)) * df_effect) ./ ((squeeze(stat_difficulty.stat(ch, :, :)) * df_effect) + (n_subjects - 1));
+    apes_difficulty(ch, :, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
+    petasq = (squeeze(stat_agency.stat(ch, :, :)) * df_effect) ./ ((squeeze(stat_agency.stat(ch, :, :)) * df_effect) + (n_subjects - 1));
+    apes_agency(ch, :, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
+    petasq = (squeeze(stat_interaction.stat(ch, :, :)) * df_effect) ./ ((squeeze(stat_interaction.stat(ch, :, :)) * df_effect) + (n_subjects - 1));
+    apes_interaction(ch, :, :) = petasq - (1 - petasq) .* (df_effect / (n_subjects - 1));
 end
 
 % Save effect sizes
-dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
-dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
-dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
-
-% Save lineplots at Fz
-dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post1(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post1(:, 11, :)), 1)]);
-
-% Save lineplots at FCz
-dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip0_hard_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post1(:, 20, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post1(:, 20, :)), 1)]);
-% Save lineplots at Fz
-dlmwrite([PATH_VEUSZ, 'lineplots_cz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_post0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post1(:, 29, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post1(:, 29, :)), 1)]);
-
-% Save lineplots at FCz
-dlmwrite([PATH_VEUSZ, 'lineplots_cpz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 38, :)), 1);...
-                                              mean(squeeze(erp_flip0_hard_post0(:, 38, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post0(:, 38, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 38, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post1(:, 38, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post1(:, 38, :)), 1)]);
-
-% Save lineplots at Pz
-dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip0_hard_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post0(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_easy_post1(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip1_hard_post1(:, 48, :)), 1)]);
-
-% Save lineplots at POz
-dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip0_hard_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post0(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_easy_post1(:, 57, :)), 1);...
-                                              mean(squeeze(erp_flip1_hard_post1(:, 57, :)), 1)]);
-
-% Save erp-times
-dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
-
-% Plot effect size topos at selected time points for agency
-clim = [-0.3, 0.3];
-tpoints = [550, 900, 1400];
-for t = 1 : length(tpoints)
-    figure('Visible', 'off'); clf;
-    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_agency(:, tidx), 2);
-    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(jet);
-    caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
-end
-
-% Plot effect size topos at selected time points for difficulty
-clim = [-0.3, 0.3];
-tpoints = [120, 420, 1600];
-for t = 1 : length(tpoints)
-    figure('Visible', 'off'); clf;
-    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_difficulty(:, tidx), 2);
-    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(jet);
-    caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
-end
-
-% Plot effect size topos at selected time points for interaction
-clim = [-0.3, 0.3];
-tpoints = [150, 450, 1700];
-for t = 1 : length(tpoints)
-    figure('Visible', 'off'); clf;
-    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_interaction(:, tidx), 2);
-    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(jet);
-    caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_interaction_', num2str(tpoints(t)), 'ms', '.png']);
-end
+dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], squeeze(mean(apes_difficulty, 1)));
+dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], squeeze(mean(apes_agency, 1)));
+dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], squeeze(mean(apes_interaction, 1)));

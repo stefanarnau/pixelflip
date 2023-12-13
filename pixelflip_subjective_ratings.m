@@ -28,9 +28,9 @@ save([PATH_OUT, 'table_ratings.mat'], 'T');
 [mw_sig, mw_p, mw_ci, mw_stat] = ttest(T.mw_accu, T.mw_flip);
 
 % Effect sizes
-apes_focus = apes_from_t(focus_stat.tstat, 39);
-apes_moti = apes_from_t(moti_stat.tstat, 39);
-apes_mw = apes_from_t(mw_stat.tstat, 39);
+apes_focus = apes_t(focus_stat.tstat, 39);
+apes_moti = apes_t(moti_stat.tstat, 39);
+apes_mw = apes_t(mw_stat.tstat, 39);
 
 % Average for plot
 self_reports_out = [mean(T.focus_accu), std(T.focus_accu), mean(T.moti_accu), std(T.moti_accu), mean(T.mw_accu), std(T.mw_accu);...

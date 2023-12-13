@@ -385,6 +385,33 @@ dlmwrite([PATH_VEUSZ, 'apes_difficulty.csv'], apes_difficulty);
 dlmwrite([PATH_VEUSZ, 'apes_agency.csv'], apes_agency);
 dlmwrite([PATH_VEUSZ, 'apes_interaction.csv'], apes_interaction);
 
+% Plot masks
+figure()
+subplot(2, 2, 1)
+contourf(erp_times,[1:65], apes_difficulty, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_difficulty.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('difficulty')
+
+subplot(2, 2, 2)
+contourf(erp_times,[1:65], apes_agency, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_agency.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('agency')
+
+subplot(2, 2, 3)
+contourf(erp_times,[1:65], apes_interaction, 50, 'LineColor', 'none')
+caxis([-0.5, 0.5])
+colormap(jet)
+hold on
+contour(erp_times,[1:65], stat_interaction.mask, 'levels', 1, 'LineColor', 'k', 'LineWidth', 1.5)
+title('interaction')
+
+
 % Save lineplots at Fz
 dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_flip0_easy_post0(:, 11, :)), 1);...
                                              mean(squeeze(erp_flip0_hard_post0(:, 11, :)), 1);...
