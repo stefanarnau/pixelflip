@@ -52,8 +52,10 @@ for s = 1 : length(subject_list)
     ids(s) = str2num(subject(3 : 4));
 
     % Load subject data. EEG data has dimensionality channels x times x trials
-    EEG = pop_loadset('filename',    [subject, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+    EEG = pop_loadset('filename', [subject, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
+    % Load cuelocked data for baseline values
+    BLVALS = pop_loadset('filename', [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'check', 'on');
 
     % Trialinfo columns:
     % 01: trial_nr
@@ -132,6 +134,17 @@ for s = 1 : length(subject_list)
     
         end
     end
+
+    % Find trials that are present in both, feedbacklocked and cuelocked, datasets
+    common_trials = intersect(BLVALS.trialinfo(:, 1), EEG.trialinfo(:, 1));
+
+    % Reduce datasets to common trials
+    to_keep = ismember(EEG.trialinfo(:, 1), common_trials); 
+    EEG.data = EEG.data(:, :, to_keep);
+    EEG.trialinfo = EEG.trialinfo(to_keep, :);
+    to_keep = ismember(BLVALS.trialinfo(:, 1), common_trials); 
+    BLVALS.data = BLVALS.data(:, :, to_keep);
+    BLVALS.trialinfo = BLVALS.trialinfo(to_keep, :);
     
     % Get trial-indices of conditions
     idx_flip0_easy_flip0 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 0;
@@ -141,13 +154,24 @@ for s = 1 : length(subject_list)
     idx_flip1_easy_flip1 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 5) == 1;
     idx_flip1_hard_flip1 = EEG.trialinfo(:, 11) == 1 & EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 5) == 1;
 
+    % Get condition specificbaseline values for feedbacklocked erps from before cue-onset
+    idx_bl = BLVALS.times >= -200 & BLVALS.times <= 0;
+    bl_flip0_easy_flip0(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip0_easy_flip0), [2, 3]));
+    bl_flip0_hard_flip0(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip0_hard_flip0), [2, 3]));
+    bl_flip1_easy_flip0(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip1_easy_flip0), [2, 3]));
+    bl_flip1_hard_flip0(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip1_hard_flip0), [2, 3]));
+    bl_flip1_easy_flip1(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip1_easy_flip1), [2, 3]));
+    bl_flip1_hard_flip1(s, :, :) = squeeze(mean(BLVALS.data(:, idx_bl, idx_flip1_hard_flip1), [2, 3]));   
+
     % Calculate subject ERPs by averaging across trials for each condition.
     erp_flip0_easy_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_easy_flip0)), 3);
     erp_flip0_hard_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip0_hard_flip0)), 3);
     erp_flip1_easy_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_flip0)), 3);
     erp_flip1_hard_flip0(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip0)), 3);
     erp_flip1_easy_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_flip1)), 3);
-    erp_flip1_hard_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip1)), 3);   
+    erp_flip1_hard_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip1)), 3); 
+
+    aa=bb
 
 end
 
