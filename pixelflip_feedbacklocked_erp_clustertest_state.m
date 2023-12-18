@@ -171,8 +171,6 @@ for s = 1 : length(subject_list)
     erp_flip1_easy_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_easy_flip1)), 3);
     erp_flip1_hard_flip1(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_flip1_hard_flip1)), 3); 
 
-    aa=bb
-
 end
 
 % The order of things
