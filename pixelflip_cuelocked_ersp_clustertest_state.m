@@ -28,7 +28,7 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
 
 % Set complex Morlet wavelet parameters
-n_frq = 25;
+n_frq = 29;
 frqrange = [2, 30];
 tfres_range = [600, 200];
 
@@ -94,6 +94,9 @@ ersp_flip1_hard_post0 = zeros(length(subject_list), EEG.nbchan, length(tf_freqs)
 ersp_flip1_easy_post1 = zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times));
 ersp_flip1_hard_post1 = zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times));
 
+% Remember number of trials of conditions
+n_trials = [];
+
 % Loop subjects
 ids = [];
 for s = 1 : length(subject_list)
@@ -145,16 +148,16 @@ for s = 1 : length(subject_list)
                 end
 
                 % Check if previous incorrect
-                % if EEG.trialinfo(idx_prev, 11) ~= 1
+                if EEG.trialinfo(idx_prev, 11) ~= 1
 
-                %     % Not a good trial...
-                %     EEG.trialinfo(e, 12) = -1;
-                %     EEG.trialinfo(e, 13) = -1;
+                    % Not a good trial...
+                    EEG.trialinfo(e, 12) = -1;
+                    EEG.trialinfo(e, 13) = -1;
 
-                %     % Next
-                %     continue;
+                    % Next
+                    continue;
 
-                % end
+                end
 
                 % Check if previous was flipped
                 if EEG.trialinfo(idx_prev, 5) == 1
@@ -192,6 +195,14 @@ for s = 1 : length(subject_list)
     idx_flip1_hard_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
     idx_flip1_easy_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
     idx_flip1_hard_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
+
+    % Save number of trials of conditions
+    n_trials(s, :) = [sum(idx_flip0_easy_post0),...
+                      sum(idx_flip0_hard_post0),...
+                      sum(idx_flip1_easy_post0),...
+                      sum(idx_flip1_hard_post0),...
+                      sum(idx_flip1_easy_post1),...
+                      sum(idx_flip1_hard_post1)];
 
     % Loop channels
     for ch = 1 : EEG.nbchan
@@ -244,7 +255,10 @@ for s = 1 : length(subject_list)
 
     end % end channel loop
 
-end
+end % End subject loop
+
+% Save number of trials
+writematrix(n_trials, [PATH_TF_DATA 'n_trials.csv']);
 
 % Prune again (after tf-decomposition)
 % prune_times = [-200, 1200];
