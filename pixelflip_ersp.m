@@ -80,7 +80,7 @@ for s = 1 : length(subject_list)
     idx_easy = trialinfo(:, 4) == 0 & trialinfo(:, 12) == 1;
     idx_hard = trialinfo(:, 4) == 1 & trialinfo(:, 12) == 1;
 
-    % Get trial-indices forfactor combinations
+    % Get trial-indices for factor combinations
     idx_agen00_easy = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
     idx_agen00_hard = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
     idx_agen10_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
@@ -99,7 +99,7 @@ for s = 1 : length(subject_list)
         powcube = double(powcube);
 
         % Define baseline time window
-        ersp_bl = [-500, -200];
+        ersp_bl = [-500, 0];
 
         % Get condition general baseline values
         tmp = squeeze(mean(powcube, 3));
@@ -107,64 +107,77 @@ for s = 1 : length(subject_list)
         [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
         bl_condition_general = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
-        % Get condition specific baseline values
-        tmp = squeeze(mean(powcube(:, :, idx_agen00), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen00 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen10), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen10 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen11), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen11 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_easy), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_hard), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen00_easy), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen00_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen00_hard), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen00_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen10_easy), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen10_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen10_hard), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen10_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen11_easy), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen11_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
-        tmp = squeeze(mean(powcube(:, :, idx_agen11_hard), 3));
-        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-        bl_agen11_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % Calculate ERSPs using condition-specific baselines 
+        ersp_agen00(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00), 3)), bl_condition_general)));
+        ersp_agen10(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10), 3)), bl_condition_general)));
+        ersp_agen11(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11), 3)), bl_condition_general)));
+        ersp_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy), 3)), bl_condition_general)));
+        ersp_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard), 3)), bl_condition_general)));
+        ersp_agen00_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_easy), 3)), bl_condition_general)));
+        ersp_agen00_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_hard), 3)), bl_condition_general)));
+        ersp_agen10_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_easy), 3)), bl_condition_general)));
+        ersp_agen10_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_hard), 3)), bl_condition_general)));
+        ersp_agen11_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_easy), 3)), bl_condition_general)));
+        ersp_agen11_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_hard), 3)), bl_condition_general)));
 
-        % Calculate ERSPs
-        ersp_agen00(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00), 3)), bl_agen00)));
-        ersp_agen10(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10), 3)), bl_agen10)));
-        ersp_agen11(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11), 3)), bl_agen11)));
-        ersp_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy), 3)), bl_easy)));
-        ersp_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard), 3)), bl_hard)));
-        ersp_agen00_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_easy), 3)), bl_agen00_easy)));
-        ersp_agen00_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_hard), 3)), bl_agen00_hard)));
-        ersp_agen10_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_easy), 3)), bl_agen10_easy)));
-        ersp_agen10_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_hard), 3)), bl_agen10_hard)));
-        ersp_agen11_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_easy), 3)), bl_agen11_easy)));
-        ersp_agen11_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_hard), 3)), bl_agen11_hard)));
+        % % Get condition specific baseline values
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+
+        % % Calculate ERSPs using condition-specific baselines 
+        % ersp_agen00(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00), 3)), bl_agen00)));
+        % ersp_agen10(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10), 3)), bl_agen10)));
+        % ersp_agen11(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11), 3)), bl_agen11)));
+        % ersp_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy), 3)), bl_easy)));
+        % ersp_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard), 3)), bl_hard)));
+        % ersp_agen00_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_easy), 3)), bl_agen00_easy)));
+        % ersp_agen00_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_hard), 3)), bl_agen00_hard)));
+        % ersp_agen10_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_easy), 3)), bl_agen10_easy)));
+        % ersp_agen10_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_hard), 3)), bl_agen10_hard)));
+        % ersp_agen11_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_easy), 3)), bl_agen11_easy)));
+        % ersp_agen11_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_hard), 3)), bl_agen11_hard)));
 
     end % end channel loop
 
@@ -304,6 +317,7 @@ cfg.design = design;
 
 % The tests
 [stat_agen_state]  = ft_freqstatistics(cfg, GA_agen00, GA_agen10);
+aa=bb
 [stat_agen_sequence]  = ft_freqstatistics(cfg, GA_agen10, GA_agen11);
 [stat_difficulty]  = ft_freqstatistics(cfg, GA_easy, GA_hard);
 [stat_interaction_state] = ft_freqstatistics(cfg, GA_diff_agen00, GA_diff_agen10);
@@ -317,11 +331,11 @@ save([PATH_TF_RESULTS 'stat_interaction_state.mat'], 'stat_interaction_state');
 save([PATH_TF_RESULTS 'stat_interaction_sequence.mat'], 'stat_interaction_sequence');
 
 % Save masks
-dlmwrite([PATH_VEUSZ, 'contour_agen_state.csv'], stat_agen_state.mask);
-dlmwrite([PATH_VEUSZ, 'contour_agen_sequence.csv'], stat_agen_sequence.mask);
-dlmwrite([PATH_VEUSZ, 'contour_difficulty.csv'], stat_difficulty.mask);
-dlmwrite([PATH_VEUSZ, 'contour_interaction_state.csv'], stat_interaction_state.mask);
-dlmwrite([PATH_VEUSZ, 'contour_interaction_sequence.csv'], stat_interaction_sequence.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_agen_state.csv'], stat_agen_state.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_agen_sequence.csv'], stat_agen_sequence.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_difficulty.csv'], stat_difficulty.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_interaction_state.csv'], stat_interaction_state.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_interaction_sequence.csv'], stat_interaction_sequence.mask);
 
 % Calculate and save effect sizes
 apes_agen_state = [];
@@ -330,7 +344,7 @@ apes_difficulty = [];
 apes_interaction_state = [];
 apes_interaction_sequence = [];
 
-for ch = 1 : EEG.nbchan
+for ch = 1 : 65
 
     petasq = (squeeze(stat_agen_state.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_agen_state.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
     adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
@@ -362,7 +376,7 @@ save([PATH_TF_RESULTS, 'apes_interaction_state.mat'], 'apes_interaction_state');
 save([PATH_TF_RESULTS, 'apes_interaction_sequence.mat'], 'apes_interaction_sequence');
 
 % Identify significant clusters
-clust_thresh = 0.05;
+clust_thresh = 0.1;
 clusts = struct();
 cnt = 0;
 stat_names = {'stat_agen_state', 'stat_agen_sequence', 'stat_difficulty', 'stat_interaction_state', 'stat_interaction_sequence'};
@@ -428,4 +442,21 @@ for cnt = 1 : numel(clusts)
     title(['proportion tf-points significant'], 'FontSize', 10)
 
     saveas(gcf, [PATH_TF_RESULTS 'clustnum_' num2str(clusts(cnt).clustnum) '_' clusts(cnt).testlabel '.png']); 
+
 end
+
+
+
+% Plot some effect sizes
+figure()
+pd = squeeze(mean(apes_agen_state, 1));
+contourf(tf_times, tf_freqs, pd, 40, 'linecolor','none')
+clim([0, 0.5])
+colormap(hot)
+
+th00 = squeeze(mean(GA_agen00.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+th10 = squeeze(mean(GA_agen10.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+th11 = squeeze(mean(GA_agen11.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+figure()
+plot(tf_times, [th00,th10,th11])
+legend({'00','10','11'})
