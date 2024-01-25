@@ -317,7 +317,6 @@ cfg.design = design;
 
 % The tests
 [stat_agen_state]  = ft_freqstatistics(cfg, GA_agen00, GA_agen10);
-aa=bb
 [stat_agen_sequence]  = ft_freqstatistics(cfg, GA_agen10, GA_agen11);
 [stat_difficulty]  = ft_freqstatistics(cfg, GA_easy, GA_hard);
 [stat_interaction_state] = ft_freqstatistics(cfg, GA_diff_agen00, GA_diff_agen10);

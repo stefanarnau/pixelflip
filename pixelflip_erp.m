@@ -334,7 +334,7 @@ GA_diff_agen11 = ft_timelockgrandaverage(cfg, GA{1, :});
 
 % Testparams
 testalpha  = 0.05;
-voxelalpha  = 0.01;
+voxelalpha  = 0.05;
 nperm = 1000;
 
 % Set config
@@ -414,11 +414,11 @@ for ch = 1 : 65
 end
 
 % Save effect sizes
-dlmwrite([PATH_ERP_RESULTS, 'apes_agen_state.csv'], 'apes_agen_state');
-dlmwrite([PATH_ERP_RESULTS, 'apes_agen_sequence.csv'], 'apes_agen_sequence');
-dlmwrite([PATH_ERP_RESULTS, 'apes_difficulty.csv'], 'apes_difficulty');
-dlmwrite([PATH_ERP_RESULTS, 'apes_interaction_state.csv'], 'apes_interaction_state');
-dlmwrite([PATH_ERP_RESULTS, 'apes_interaction_sequence.csv'], 'apes_interaction_sequence');
+dlmwrite([PATH_ERP_RESULTS, 'apes_agen_state.csv'], apes_agen_state);
+dlmwrite([PATH_ERP_RESULTS, 'apes_agen_sequence.csv'], apes_agen_sequence);
+dlmwrite([PATH_ERP_RESULTS, 'apes_difficulty.csv'], apes_difficulty);
+dlmwrite([PATH_ERP_RESULTS, 'apes_interaction_state.csv'], apes_interaction_state);
+dlmwrite([PATH_ERP_RESULTS, 'apes_interaction_sequence.csv'], apes_interaction_sequence);
 
 figure()
 subplot(2, 3, 1)
@@ -522,3 +522,43 @@ dlmwrite([PATH_ERP_RESULTS, 'lineplots_poz.csv'],  [mean(squeeze(erp_agen00_easy
 
 % Save erp-times
 dlmwrite([PATH_ERP_RESULTS, 'erp_times.csv'], erp_times);
+
+
+% Plot effect size topos at selected time points for agency state
+c_lim = [-0.8, 0.8];
+tpoints = [700, 1100, 1450];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_agen_state(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(jet);
+    caxis(c_lim);
+    saveas(gcf, [PATH_ERP_RESULTS, 'topo_agen_state_', num2str(tpoints(t)), 'ms', '.png']);
+end
+
+% Plot effect size topos at selected time points for agency sequence
+c_lim = [-0.8, 0.8];
+tpoints = [700, 1100, 1450];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_agen_sequence(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(jet);
+    caxis(c_lim);
+    saveas(gcf, [PATH_ERP_RESULTS, 'topo_agen_sequence_', num2str(tpoints(t)), 'ms', '.png']);
+end
+
+% Plot effect size topos at selected time points for difficulty
+c_lim = [-0.8, 0.8];
+tpoints = [120, 450, 1600];
+for t = 1 : length(tpoints)
+    figure('Visible', 'off'); clf;
+    tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
+    pd = mean(apes_difficulty(:, tidx), 2);
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(jet);
+    caxis(c_lim);
+    saveas(gcf, [PATH_ERP_RESULTS, 'topo_difficulty_', num2str(tpoints(t)), 'ms', '.png']);
+end

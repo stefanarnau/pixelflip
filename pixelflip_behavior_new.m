@@ -3,7 +3,7 @@ clear all;
 % PATH VARS - PLEASE ADJUST!!!!!
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_OUT         = '/mnt/data_dump/pixelflip/veusz/behavior/';  
+PATH_OUT         = '/mnt/data_dump/pixelflip/6_behavioral_results/';  
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -42,6 +42,40 @@ if ismember('part1', to_execute)
         % Load data
         EEG = pop_loadset('filename', [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
+        % Create below:
+        % 12: Previous accuracy (-1 if previous trial in different block or previous trial not available or if previous trial response is missing)
+        % 13: Previous flipped (-1 if previous trial in different block or previous trial not available)
+
+        % Loop epochs
+        for e = 1 : size(EEG.trialinfo, 1)
+
+            % Check in previous trial if available
+            if sum(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1) > 0 
+
+                % Get index of previous trial
+                idx_prev = find(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1);
+
+                % Check if different blocks
+                if EEG.trialinfo(e, 2) ~= EEG.trialinfo(idx_prev, 2)
+                    EEG.trialinfo(e, 12) = -1;
+                    EEG.trialinfo(e, 13) = -1;
+                    continue;
+                end
+
+                % Set previous accuracy
+                EEG.trialinfo(e, 12) = EEG.trialinfo(idx_prev, 11);
+
+                % Set previous flipped
+                EEG.trialinfo(e, 13) = EEG.trialinfo(idx_prev, 5);
+
+            else
+                EEG.trialinfo(e, 12) = -1;
+                EEG.trialinfo(e, 13) = -1;
+            end
+        end
+
+        trialinfo = EEG.trialinfo;
+
         % Trialinfo columns:
         % 01: trial_nr
         % 02: block_nr
@@ -54,90 +88,27 @@ if ismember('part1', to_execute)
         % 09: feedback_accuracy
         % 10: feedback_color
         % 11: accuracy  
+        % 12: Previous accuracy (-1 if previous trial in different block or previous trial not available or if previous trial response is missing)
+        % 13: Previous flipped (-1 if previous trial in different block or previous trial not available)
 
-        % Loop epochs
-        for e = 1 : size(EEG.trialinfo, 1)
-
-            % If in flip block
-            if EEG.trialinfo(e, 3) == 0
-
-                % Check in previous trial if available
-                if sum(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1) > 0 
-
-                    % Get index of previous trial
-                    idx_prev = find(EEG.trialinfo(:, 1) == EEG.trialinfo(e, 1) - 1);
-
-                    % Check if different blocks
-                    if EEG.trialinfo(e, 2) ~= EEG.trialinfo(idx_prev, 2)
-
-                        % Not a good trial...
-                        EEG.trialinfo(e, 12) = -1;
-                        EEG.trialinfo(e, 13) = -1;
-
-                        % Next
-                        continue;
-
-                    end
-
-                    % Check if previous incorrect
-                    if EEG.trialinfo(idx_prev, 11) ~= 1
-
-                        % Not a good trial...
-                        EEG.trialinfo(e, 12) = -1;
-                        EEG.trialinfo(e, 13) = -1;
-
-                        % Next
-                        continue;
-
-                    end
-
-                    % Check if previous was flipped
-                    if EEG.trialinfo(idx_prev, 5) == 1
-
-                        % Yes
-                        EEG.trialinfo(e, 12) = 1;
-                        EEG.trialinfo(e, 13) = EEG.trialinfo(idx_prev, 4);
-
-                    elseif EEG.trialinfo(idx_prev, 5) == 0
-
-                        % No
-                        EEG.trialinfo(e, 12) = 0;
-                        EEG.trialinfo(e, 13) = EEG.trialinfo(idx_prev, 4);
-                    
-                    end
-                end
-
-            % If not a flip block
-            else
-
-                % Not a good trial...
-                EEG.trialinfo(e, 12) = -1;
-                EEG.trialinfo(e, 13) = -1;
-
-                % Next
-                continue;
-        
-            end
-        end
-
-        % Get trial-indices of conditions
-        idx_flip0_easy_post0 = EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 0;
-        idx_flip0_hard_post0 = EEG.trialinfo(:, 3) == 1 & EEG.trialinfo(:, 4) == 1;
-        idx_flip1_easy_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 0;
-        idx_flip1_easy_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 12) == 1;
-        idx_flip1_hard_post0 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 0;
-        idx_flip1_hard_post1 = EEG.trialinfo(:, 3) == 0 & EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 12) == 1;
+        % Get trial-indices for factor combinations
+        idx_agen00_easy = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
+        idx_agen00_hard = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
+        idx_agen10_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
+        idx_agen10_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
+        idx_agen11_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 1;
+        idx_agen11_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 1;
 
         % Get correct idx
         idx_correct = EEG.trialinfo(:, 11) == 1;
 
         % Get mean accuracy
-        acc_flip0_easy_post0 = sum(EEG.trialinfo(idx_flip0_easy_post0, 11) == 1) / sum(idx_flip0_easy_post0);
-        acc_flip0_hard_post0 = sum(EEG.trialinfo(idx_flip0_hard_post0, 11) == 1) / sum(idx_flip0_hard_post0);
-        acc_flip1_easy_post0 = sum(EEG.trialinfo(idx_flip1_easy_post0, 11) == 1) / sum(idx_flip1_easy_post0);
-        acc_flip1_easy_post1 = sum(EEG.trialinfo(idx_flip1_easy_post1, 11) == 1) / sum(idx_flip1_easy_post1);
-        acc_flip1_hard_post0 = sum(EEG.trialinfo(idx_flip1_hard_post0, 11) == 1) / sum(idx_flip1_hard_post0);
-        acc_flip1_hard_post1 = sum(EEG.trialinfo(idx_flip1_hard_post1, 11) == 1) / sum(idx_flip1_hard_post1);
+        acc_flip0_easy_post0 = sum(EEG.trialinfo(idx_agen00_easy, 11) == 1) / sum(idx_agen00_easy);
+        acc_flip0_hard_post0 = sum(EEG.trialinfo(idx_agen00_hard, 11) == 1) / sum(idx_agen00_hard);
+        acc_flip1_easy_post0 = sum(EEG.trialinfo(idx_agen10_easy, 11) == 1) / sum(idx_agen10_easy);
+        acc_flip1_hard_post0 = sum(EEG.trialinfo(idx_agen10_hard, 11) == 1) / sum(idx_agen10_hard);
+        acc_flip1_easy_post1 = sum(EEG.trialinfo(idx_agen11_easy, 11) == 1) / sum(idx_agen11_easy);
+        acc_flip1_hard_post1 = sum(EEG.trialinfo(idx_agen11_hard, 11) == 1) / sum(idx_agen11_hard);
         acc_all(s, :) = [acc_flip0_easy_post0,...
                          acc_flip0_hard_post0,...
                          acc_flip1_easy_post0,...
@@ -146,12 +117,12 @@ if ismember('part1', to_execute)
                          acc_flip1_hard_post1];
 
         % Get mean RT of correct trials
-        rt_flip0_easy_post0 = nanmean(EEG.trialinfo(idx_flip0_easy_post0 & idx_correct, 7));
-        rt_flip0_hard_post0 = nanmean(EEG.trialinfo(idx_flip0_hard_post0 & idx_correct, 7));
-        rt_flip1_easy_post0 = nanmean(EEG.trialinfo(idx_flip1_easy_post0 & idx_correct, 7));
-        rt_flip1_hard_post0 = nanmean(EEG.trialinfo(idx_flip1_hard_post0 & idx_correct, 7));
-        rt_flip1_easy_post1 = nanmean(EEG.trialinfo(idx_flip1_easy_post1 & idx_correct, 7));
-        rt_flip1_hard_post1 = nanmean(EEG.trialinfo(idx_flip1_hard_post1 & idx_correct, 7));
+        rt_flip0_easy_post0 = nanmean(EEG.trialinfo(idx_agen00_easy & idx_correct, 7));
+        rt_flip0_hard_post0 = nanmean(EEG.trialinfo(idx_agen00_hard & idx_correct, 7));
+        rt_flip1_easy_post0 = nanmean(EEG.trialinfo(idx_agen10_easy & idx_correct, 7));
+        rt_flip1_hard_post0 = nanmean(EEG.trialinfo(idx_agen10_hard & idx_correct, 7));
+        rt_flip1_easy_post1 = nanmean(EEG.trialinfo(idx_agen11_easy & idx_correct, 7));
+        rt_flip1_hard_post1 = nanmean(EEG.trialinfo(idx_agen11_hard & idx_correct, 7));
         rt_all(s, :) = [rt_flip0_easy_post0,...
                         rt_flip0_hard_post0,...
                         rt_flip1_easy_post0,...
@@ -195,6 +166,9 @@ if ismember('part1', to_execute)
     rt_0_0 = mean(rt_all(:, [1, 2]), 2);
     rt_1_0 = mean(rt_all(:, [3, 4]), 2);
     rt_1_1 = mean(rt_all(:, [5, 6]), 2);
+    acc_0_0 = mean(acc_all(:, [1, 2]), 2);
+    acc_1_0 = mean(acc_all(:, [3, 4]), 2);
+    acc_1_1 = mean(acc_all(:, [5, 6]), 2);
 
     % Calculate t-tests
     [H1, P1, CI1, STATS1] = ttest(rt_0_0, rt_1_0);
@@ -203,7 +177,16 @@ if ismember('part1', to_execute)
 
     % Correct for multiple comparisons
     p = [P1, P2, P3];
-    p_corr = bonf_holm(p, 0.05);
+    p_corr_rt = bonf_holm(p, 0.05);
+
+    % Calculate t-tests
+    [H1, P1, CI1, STATS1] = ttest(acc_0_0, acc_1_0);
+    [H2, P2, CI2, STATS2] = ttest(acc_0_0, acc_1_1);
+    [H3, P3, CI3, STATS3] = ttest(acc_1_0, acc_1_1);
+
+    % Correct for multiple comparisons
+    p = [P1, P2, P3];
+    p_corr_acc = bonf_holm(p, 0.05);
 
     % Save behavioral data for veusz
     rt_mean = mean(rt_all, 1);
