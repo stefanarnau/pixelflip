@@ -1,7 +1,7 @@
 clear all;
 
 % Path variables
-PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
+PATH_EEGLAB      = '/home/plkn/eeglab2023.1/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_ERP_RESULTS  = '/mnt/data_dump/pixelflip/5_erp_results/';
 
