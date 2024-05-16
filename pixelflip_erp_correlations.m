@@ -5,6 +5,7 @@ PATH_EEGLAB       = '/home/plkn/eeglab2023.1/';
 PATH_AUTOCLEANED  = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_COR_RESULTS  = '/mnt/data_dump/pixelflip/5_correlation_results/';
 PATH_RATINGS      = '/mnt/data_dump/pixelflip/veusz/subjecctive_ratings/';  
+PATH_ERP_RESULTS  = '/mnt/data_dump/pixelflip/5_erp_results/';
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -225,14 +226,6 @@ end
 erp_agen00 = erp_agen00(:, new_order_idx, :);
 erp_agen10 = erp_agen10(:, new_order_idx, :);
 erp_agen11 = erp_agen11(:, new_order_idx, :);
-erp_easy = erp_easy(:, new_order_idx, :);
-erp_hard = erp_hard(:, new_order_idx, :);
-erp_agen00_easy = erp_agen00_easy(:, new_order_idx, :);
-erp_agen00_hard = erp_agen00_hard(:, new_order_idx, :);
-erp_agen10_easy = erp_agen10_easy(:, new_order_idx, :);
-erp_agen10_hard = erp_agen10_hard(:, new_order_idx, :);
-erp_agen11_easy = erp_agen11_easy(:, new_order_idx, :);
-erp_agen11_hard = erp_agen11_hard(:, new_order_idx, :);
 chanlocs = chanlocs(new_order_idx);
 
 % Restructure coordinates
@@ -273,15 +266,6 @@ for s = 1 : length(subject_list)
 end 
 GA_diff_state = ft_timelockgrandaverage(cfg, GA{1, :});
 
-% GA struct agen10
-GA = {};
-for s = 1 : length(subject_list)
-    tmp = squeeze(erp_agen10(s, :, :)) - squeeze(erp_agen11(s, :, :));
-    ga_template.avg = tmp;
-    GA{s} = ga_template;
-end 
-GA_diff_sequence = ft_timelockgrandaverage(cfg, GA{1, :});
-
 % Correlations focus
 cfg.statistic = 'ft_statfun_correlationT';
 cfg.alpha = 0.025;
@@ -299,7 +283,6 @@ cfg.design = T.focus_accu - T.focus_flip;
 
 % The test
 [stat_focus_state]    = ft_timelockstatistics(cfg, GA_diff_state);
-[stat_focus_sequence] = ft_timelockstatistics(cfg, GA_diff_sequence);
 
 % Correlations motivation
 cfg.statistic = 'ft_statfun_correlationT';
@@ -318,7 +301,6 @@ cfg.design = T.moti_accu - T.moti_flip;
 
 % The test
 [stat_moti_state]    = ft_timelockstatistics(cfg, GA_diff_state);
-[stat_moti_sequence] = ft_timelockstatistics(cfg, GA_diff_sequence);
 
 % Correlations mind wandering
 cfg.statistic = 'ft_statfun_correlationT';
@@ -337,25 +319,35 @@ cfg.design = T.mw_accu - T.mw_flip;
 
 % The test
 [stat_mw_state]    = ft_timelockstatistics(cfg, GA_diff_state);
-[stat_mw_sequence] = ft_timelockstatistics(cfg, GA_diff_sequence);
 
 % Save masks and rho
 dlmwrite([PATH_COR_RESULTS, 'rho_focus_state.csv'], stat_focus_state.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_focus_state.csv'], stat_focus_state.mask);
-dlmwrite([PATH_COR_RESULTS, 'rho_focus_sequence.csv'], stat_focus_sequence.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_focus_sequence.csv'], stat_focus_sequence.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_moti_state.csv'], stat_moti_state.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_moti_state.csv'], stat_moti_state.mask);
-dlmwrite([PATH_COR_RESULTS, 'rho_moti_sequence.csv'], stat_moti_sequence.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_moti_sequence.csv'], stat_moti_sequence.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_mw_state.csv'], stat_mw_state.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_mw_state.csv'], stat_mw_state.mask);
-dlmwrite([PATH_COR_RESULTS, 'rho_mw_sequence.csv'], stat_mw_sequence.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_mw_sequence.csv'], stat_mw_sequence.mask);
-
-aa=bb
 
 
+% Load erp-mask
+erp_mask = logical(dlmread([PATH_ERP_RESULTS, 'contour_agen_state.csv']));
+
+% For non-flip blocks
+ave_erp_nonflip = [];
+for s = 1 : length(subject_list)
+    tmp = squeeze(erp_agen00(s, :, :));
+    ave_erp_nonflip(s) = mean(tmp(erp_mask));
+end
+scatter(ave_erp_nonflip, T.moti_accu)
+
+% Get significant cluster averages
+motivation_diffs = T.moti_accu - T.moti_flip;
+ave_clust_diffs = [];
+for s = 1 : length(subject_list)
+    tmp = squeeze(erp_agen00(s, :, :)) - squeeze(erp_agen10(s, :, :));
+    ave_clust_diffs(s) = mean(tmp(stat_moti_state.mask));
+end
+scatter(ave_clust_diffs, motivation_diffs)
 
 
 
@@ -363,27 +355,7 @@ aa=bb
 
 
 
-
-
-% Save lineplots at Fz
-dlmwrite([PATH_VEUSZ, 'lineplots_fz.csv'],  [mean(squeeze(erp_asis(:, 11, :)), 1);...
-                                             mean(squeeze(erp_flip(:, 11, :)), 1)]);
-
-% Save lineplots at POz
-dlmwrite([PATH_VEUSZ, 'lineplots_fcz.csv'], [mean(squeeze(erp_asis(:, 20, :)), 1);...
-                                             mean(squeeze(erp_flip(:, 20, :)), 1)]);
-
-dlmwrite([PATH_VEUSZ, 'lineplots_pz.csv'],  [mean(squeeze(erp_asis(:, 48, :)), 1);...
-                                             mean(squeeze(erp_flip(:, 48, :)), 1)]);
-
-% Save lineplots at POz
-dlmwrite([PATH_VEUSZ, 'lineplots_poz.csv'], [mean(squeeze(erp_asis(:, 57, :)), 1);...
-                                             mean(squeeze(erp_flip(:, 57, :)), 1)]);
-
-% Save erp-times
-dlmwrite([PATH_VEUSZ, 'erp_times.csv'], erp_times);
-
-% Plot topos at selected time points for agency
+% Plot topos at selected time points
 clim = [-0.05, 0.3];
 tpoints = [200, 500, 800];
 for t = 1 : length(tpoints)
