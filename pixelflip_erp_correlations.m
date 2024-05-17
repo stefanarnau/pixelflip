@@ -32,7 +32,7 @@ ft_defaults;
 EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
 % Get erp times
-erp_times_idx = EEG.times >= -200 & EEG.times <= 1800;
+erp_times_idx = EEG.times >= -200 & EEG.times <= 1200;
 erp_times = EEG.times(erp_times_idx);
 
 % Get chanlocs
@@ -41,15 +41,6 @@ chanlocs = EEG.chanlocs;
 % Matrices to collect data. Dimensionality: subjects x channels x times
 erp_agen00 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
 erp_agen10 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen11 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_easy = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_hard = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen00_easy = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen00_hard = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen10_easy = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen10_hard = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen11_easy = zeros(length(subject_list), EEG.nbchan, length(erp_times));
-erp_agen11_hard = zeros(length(subject_list), EEG.nbchan, length(erp_times));
 
 % Loop subjects
 for s = 1 : length(subject_list)
@@ -112,34 +103,17 @@ for s = 1 : length(subject_list)
     % Get trial-indices for main effect agency
     idx_agen00 = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
     idx_agen10 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
-    idx_agen11 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 1;
-
-    % Get trial-indices for main effect difficulty
-    idx_easy = trialinfo(:, 4) == 0 & trialinfo(:, 12) == 1;
-    idx_hard = trialinfo(:, 4) == 1 & trialinfo(:, 12) == 1;
-
-    % Get trial-indices for factor combinations
-    idx_agen00_easy = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
-    idx_agen00_hard = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
-    idx_agen10_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
-    idx_agen10_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
-    idx_agen11_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 1;
-    idx_agen11_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 1;
 
     % Calculate erps
     erp_agen00(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen00)), 3);
     erp_agen10(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen10)), 3);
-    erp_agen11(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen11)), 3);
-    erp_easy(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_easy)), 3);
-    erp_hard(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_hard)), 3);
-    erp_agen00_easy(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen00_easy)), 3);
-    erp_agen00_hard(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen00_hard)), 3);
-    erp_agen10_easy(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen10_easy)), 3);
-    erp_agen10_hard(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen10_hard)), 3);
-    erp_agen11_easy(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen11_easy)), 3);
-    erp_agen11_hard(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen11_hard)), 3);
 
 end
+
+% Apply moving average
+%winlength = 31;
+%erp_agen00 = movmean(erp_agen00, winlength, 3);
+%erp_agen10 = movmean(erp_agen10, winlength, 3);
 
 % The order of things
 new_order_labels = {...
@@ -225,7 +199,6 @@ end
 % Install new order
 erp_agen00 = erp_agen00(:, new_order_idx, :);
 erp_agen10 = erp_agen10(:, new_order_idx, :);
-erp_agen11 = erp_agen11(:, new_order_idx, :);
 chanlocs = chanlocs(new_order_idx);
 
 % Restructure coordinates
@@ -257,16 +230,34 @@ ga_template.dimord = 'chan_time';
 ga_template.label = chanlabs;
 ga_template.time = erp_times;
 
-% GA struct agen00
+% GA struct noflip
+GA = {};
+for s = 1 : length(subject_list)
+    tmp = squeeze(erp_agen00(s, :, :));
+    ga_template.avg = tmp;
+    GA{s} = ga_template;
+end 
+GA_agen00 = ft_timelockgrandaverage(cfg, GA{1, :});
+
+% GA struct flip
+GA = {};
+for s = 1 : length(subject_list)
+    tmp = squeeze(erp_agen10(s, :, :));
+    ga_template.avg = tmp;
+    GA{s} = ga_template;
+end 
+GA_agen10= ft_timelockgrandaverage(cfg, GA{1, :});
+
+% GA struct difference ERP
 GA = {};
 for s = 1 : length(subject_list)
     tmp = squeeze(erp_agen00(s, :, :)) - squeeze(erp_agen10(s, :, :));
     ga_template.avg = tmp;
     GA{s} = ga_template;
 end 
-GA_diff_state = ft_timelockgrandaverage(cfg, GA{1, :});
+GA_diff = ft_timelockgrandaverage(cfg, GA{1, :});
 
-% Correlations focus
+% Correlations statistic config
 cfg.statistic = 'ft_statfun_correlationT';
 cfg.alpha = 0.025;
 cfg.neighbours = neighbours;
@@ -279,76 +270,163 @@ cfg.clusterstatistic = 'maxsum';
 cfg.numrandomization = 1000;
 cfg.computecritval = 'yes';
 cfg.ivar = 1;
+
+% Tests no differences
+cfg.design = T.focus_accu;
+[stat_focus_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
+cfg.design = T.moti_accu;
+[stat_moti_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
+cfg.design = T.mw_accu;
+[stat_mw_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
+cfg.design = T.focus_flip;
+[stat_focus_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
+cfg.design = T.moti_flip;
+[stat_moti_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
+cfg.design = T.mw_flip;
+[stat_mw_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
+
+% Tests difference
 cfg.design = T.focus_accu - T.focus_flip;
-
-% The test
-[stat_focus_state]    = ft_timelockstatistics(cfg, GA_diff_state);
-
-% Correlations motivation
-cfg.statistic = 'ft_statfun_correlationT';
-cfg.alpha = 0.025;
-cfg.neighbours = neighbours;
-cfg.minnbchan = 2;
-cfg.method = 'montecarlo';
-cfg.correctm = 'cluster';
-cfg.clustertail = 0;
-cfg.clusteralpha = 0.05;
-cfg.clusterstatistic = 'maxsum';
-cfg.numrandomization = 1000;
-cfg.computecritval = 'yes';
-cfg.ivar = 1;
+[stat_diff_focus] = ft_timelockstatistics(cfg, GA_diff);
 cfg.design = T.moti_accu - T.moti_flip;
-
-% The test
-[stat_moti_state]    = ft_timelockstatistics(cfg, GA_diff_state);
-
-% Correlations mind wandering
-cfg.statistic = 'ft_statfun_correlationT';
-cfg.alpha = 0.025;
-cfg.neighbours = neighbours;
-cfg.minnbchan = 2;
-cfg.method = 'montecarlo';
-cfg.correctm = 'cluster';
-cfg.clustertail = 0;
-cfg.clusteralpha = 0.05;
-cfg.clusterstatistic = 'maxsum';
-cfg.numrandomization = 1000;
-cfg.computecritval = 'yes';
-cfg.ivar = 1;
+[stat_diff_moti] = ft_timelockstatistics(cfg, GA_diff);
 cfg.design = T.mw_accu - T.mw_flip;
-
-% The test
-[stat_mw_state]    = ft_timelockstatistics(cfg, GA_diff_state);
+[stat_diff_mw] = ft_timelockstatistics(cfg, GA_diff);
 
 % Save masks and rho
-dlmwrite([PATH_COR_RESULTS, 'rho_focus_state.csv'], stat_focus_state.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_focus_state.csv'], stat_focus_state.mask);
-dlmwrite([PATH_COR_RESULTS, 'rho_moti_state.csv'], stat_moti_state.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_moti_state.csv'], stat_moti_state.mask);
-dlmwrite([PATH_COR_RESULTS, 'rho_mw_state.csv'], stat_mw_state.rho);
-dlmwrite([PATH_COR_RESULTS, 'mask_mw_state.csv'], stat_mw_state.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_focus_accu_00.csv'], stat_focus_accu_00.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_focus_accu_00.csv'], stat_focus_accu_00.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_moti_accu_00.csv'], stat_moti_accu_00.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_moti_accu_00.csv'], stat_moti_accu_00.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_mw_accu_00.csv'], stat_mw_accu_00.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_mw_accu_00.csv'], stat_mw_accu_00.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_focus_flip_10.csv'], stat_focus_flip_10.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_focus_flip_10.csv'], stat_focus_flip_10.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_moti_flip_10.csv'], stat_moti_flip_10.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_moti_flip_10.csv'], stat_moti_flip_10.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_mw_flip_10.csv'], stat_mw_flip_10.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_mw_flip_10.csv'], stat_mw_flip_10.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_focus_diff.csv'], stat_diff_focus.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_focus_diff.csv'], stat_diff_focus.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_moti_diff.csv'], stat_diff_moti.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_moti_diff.csv'], stat_diff_moti.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_mw_diff.csv'], stat_diff_mw.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_mw_diff.csv'], stat_diff_mw.mask);
+
+% plot
+figure()
+
+subplot(3, 3, 1)
+pd = stat_focus_accu_00.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_focus_accu_00.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('focus accu 00')
+
+subplot(3, 3, 2)
+pd = stat_moti_accu_00.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_moti_accu_00.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('moti accu 00')
+
+subplot(3, 3, 3)
+pd = stat_mw_accu_00.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_mw_accu_00.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('mw accu 00')
+
+subplot(3, 3, 4)
+pd = stat_focus_flip_10.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_focus_flip_10.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('focus flip 10')
+
+subplot(3, 3, 5)
+pd = stat_moti_flip_10.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_moti_flip_10.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('moti flip 10')
+
+subplot(3, 3, 6)
+pd = stat_mw_flip_10.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_mw_flip_10.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('mw flip 10')
+
+subplot(3, 3, 7)
+pd = stat_diff_focus.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_diff_focus.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('focus diff')
+
+subplot(3, 3, 8)
+pd = stat_diff_moti.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_diff_moti.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('moti diff')
+
+subplot(3, 3, 9)
+pd = stat_diff_mw.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_diff_mw.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('mw diff')
+
+
+
+
+aa = bb;
 
 
 % Load erp-mask
 erp_mask = logical(dlmread([PATH_ERP_RESULTS, 'contour_agen_state.csv']));
+erp_mask = erp_mask(:, erp_times_idx);
 
-% For non-flip blocks
-ave_erp_nonflip = [];
-for s = 1 : length(subject_list)
-    tmp = squeeze(erp_agen00(s, :, :));
-    ave_erp_nonflip(s) = mean(tmp(erp_mask));
-end
-scatter(ave_erp_nonflip, T.moti_accu)
 
 % Get significant cluster averages
 motivation_diffs = T.moti_accu - T.moti_flip;
 ave_clust_diffs = [];
 for s = 1 : length(subject_list)
     tmp = squeeze(erp_agen00(s, :, :)) - squeeze(erp_agen10(s, :, :));
-    ave_clust_diffs(s) = mean(tmp(stat_moti_state.mask));
+    ave_clust_diffs(s) = mean(tmp(erp_mask));
 end
+figure()
 scatter(ave_clust_diffs, motivation_diffs)
-
+corrcoef(ave_clust_diffs, motivation_diffs')
 
 
 
