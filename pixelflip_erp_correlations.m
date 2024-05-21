@@ -42,6 +42,14 @@ chanlocs = EEG.chanlocs;
 erp_agen00 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
 erp_agen10 = zeros(length(subject_list), EEG.nbchan, length(erp_times));
 
+% Load erp-mask
+erp_mask = logical(dlmread([PATH_ERP_RESULTS, 'contour_agen_state.csv']));
+erp_mask = erp_mask(:, erp_times_idx);
+
+% Matrices for average RTs
+rts_00 = [];
+rts_10 = [];
+
 % Loop subjects
 for s = 1 : length(subject_list)
 
@@ -107,6 +115,14 @@ for s = 1 : length(subject_list)
     % Calculate erps
     erp_agen00(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen00)), 3);
     erp_agen10(s, :, :) = mean(squeeze(EEG.data(:, erp_times_idx, idx_agen10)), 3);
+
+    % Get trial-indices for main effect agency correct only (for RTs)
+    idx_agen00 = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0 & trialinfo(:, 11) == 1;
+    idx_agen10 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0 & trialinfo(:, 11) == 1;
+
+    % Get RTs
+    rts_00(s) = mean(trialinfo(idx_agen00, 7));
+    rts_10(s) = mean(trialinfo(idx_agen10, 7));
 
 end
 
@@ -278,12 +294,17 @@ cfg.design = T.moti_accu;
 [stat_moti_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
 cfg.design = T.mw_accu;
 [stat_mw_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
+cfg.design = rts_00;
+[stat_rt_accu_00] = ft_timelockstatistics(cfg, GA_agen00);
+
 cfg.design = T.focus_flip;
 [stat_focus_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
 cfg.design = T.moti_flip;
 [stat_moti_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
 cfg.design = T.mw_flip;
 [stat_mw_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
+cfg.design = rts_10;
+[stat_rt_flip_10] = ft_timelockstatistics(cfg, GA_agen10);
 
 % Tests difference
 cfg.design = T.focus_accu - T.focus_flip;
@@ -292,6 +313,8 @@ cfg.design = T.moti_accu - T.moti_flip;
 [stat_diff_moti] = ft_timelockstatistics(cfg, GA_diff);
 cfg.design = T.mw_accu - T.mw_flip;
 [stat_diff_mw] = ft_timelockstatistics(cfg, GA_diff);
+cfg.design = rts_00 - rts_10;
+[stat_diff_rt] = ft_timelockstatistics(cfg, GA_diff);
 
 % Save masks and rho
 dlmwrite([PATH_COR_RESULTS, 'rho_focus_accu_00.csv'], stat_focus_accu_00.rho);
@@ -300,23 +323,31 @@ dlmwrite([PATH_COR_RESULTS, 'rho_moti_accu_00.csv'], stat_moti_accu_00.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_moti_accu_00.csv'], stat_moti_accu_00.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_mw_accu_00.csv'], stat_mw_accu_00.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_mw_accu_00.csv'], stat_mw_accu_00.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_rt_accu_00.csv'], stat_rt_accu_00.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_rt_accu_00.csv'], stat_rt_accu_00.mask);
+
 dlmwrite([PATH_COR_RESULTS, 'rho_focus_flip_10.csv'], stat_focus_flip_10.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_focus_flip_10.csv'], stat_focus_flip_10.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_moti_flip_10.csv'], stat_moti_flip_10.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_moti_flip_10.csv'], stat_moti_flip_10.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_mw_flip_10.csv'], stat_mw_flip_10.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_mw_flip_10.csv'], stat_mw_flip_10.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_rt_flip_10.csv'], stat_rt_flip_10.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_rt_flip_10.csv'], stat_rt_flip_10.mask);
+
 dlmwrite([PATH_COR_RESULTS, 'rho_focus_diff.csv'], stat_diff_focus.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_focus_diff.csv'], stat_diff_focus.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_moti_diff.csv'], stat_diff_moti.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_moti_diff.csv'], stat_diff_moti.mask);
 dlmwrite([PATH_COR_RESULTS, 'rho_mw_diff.csv'], stat_diff_mw.rho);
 dlmwrite([PATH_COR_RESULTS, 'mask_mw_diff.csv'], stat_diff_mw.mask);
+dlmwrite([PATH_COR_RESULTS, 'rho_rt_diff.csv'], stat_diff_rt.rho);
+dlmwrite([PATH_COR_RESULTS, 'mask_rt_diff.csv'], stat_diff_rt.mask);
 
 % plot
 figure()
 
-subplot(3, 3, 1)
+subplot(3, 4, 1)
 pd = stat_focus_accu_00.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -326,7 +357,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('focus accu 00')
 
-subplot(3, 3, 2)
+subplot(3, 4, 2)
 pd = stat_moti_accu_00.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -336,7 +367,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('moti accu 00')
 
-subplot(3, 3, 3)
+subplot(3, 4, 3)
 pd = stat_mw_accu_00.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -346,7 +377,17 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('mw accu 00')
 
-subplot(3, 3, 4)
+subplot(3, 4, 4)
+pd = stat_rt_accu_00.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_rt_accu_00.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('rt accu 00')
+
+subplot(3, 4, 5)
 pd = stat_focus_flip_10.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -356,7 +397,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('focus flip 10')
 
-subplot(3, 3, 5)
+subplot(3, 4, 6)
 pd = stat_moti_flip_10.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -366,7 +407,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('moti flip 10')
 
-subplot(3, 3, 6)
+subplot(3, 4, 7)
 pd = stat_mw_flip_10.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -376,7 +417,17 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('mw flip 10')
 
-subplot(3, 3, 7)
+subplot(3, 4, 8)
+pd = stat_rt_flip_10.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_rt_flip_10.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('rt flip 10')
+
+subplot(3, 4, 9)
 pd = stat_diff_focus.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -386,7 +437,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('focus diff')
 
-subplot(3, 3, 8)
+subplot(3, 4, 10)
 pd = stat_diff_moti.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -396,7 +447,7 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('moti diff')
 
-subplot(3, 3, 9)
+subplot(3, 4, 11)
 pd = stat_diff_mw.rho;
 contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
 clim([-0.7, 0.7])
@@ -406,27 +457,81 @@ contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
 colormap(jet)
 title('mw diff')
 
-
+subplot(3, 4, 12)
+pd = stat_diff_rt.rho;
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-0.7, 0.7])
+hold on
+pd = stat_diff_rt.mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+title('rt diff')
 
 
 aa = bb;
 
+% Get electrodes of moti diff cluster
+idx_chan = [20, 29, 38, 28, 30];
 
-% Load erp-mask
-erp_mask = logical(dlmread([PATH_ERP_RESULTS, 'contour_agen_state.csv']));
-erp_mask = erp_mask(:, erp_times_idx);
-
-
-% Get significant cluster averages
-motivation_diffs = T.moti_accu - T.moti_flip;
-ave_clust_diffs = [];
-for s = 1 : length(subject_list)
-    tmp = squeeze(erp_agen00(s, :, :)) - squeeze(erp_agen10(s, :, :));
-    ave_clust_diffs(s) = mean(tmp(erp_mask));
-end
 figure()
-scatter(ave_clust_diffs, motivation_diffs)
-corrcoef(ave_clust_diffs, motivation_diffs')
+pd1 = squeeze(mean(erp_agen00(:, idx_chan, :), [1, 2]));
+pd2 = squeeze(mean(erp_agen10(:, idx_chan, :), [1, 2]));
+plot(erp_times, pd1, 'k')
+hold on
+plot(erp_times, pd2, 'r')
+hold on
+plot(erp_times, pd1 - pd2, 'g')
+
+
+
+
+
+
+
+
+% Plot erp_mask
+figure()
+pd = squeeze(mean(erp_agen00, 1)) - squeeze(mean(erp_agen10, 1));
+contourf(erp_times, [1 : 65], pd, 40, 'linecolor','none')
+clim([-2, 2])
+hold on
+pd = erp_mask;
+contour(erp_times, [1 : 65], pd, 1, 'linecolor', 'k', 'LineWidth', 2)
+colormap(jet)
+
+
+% Diff at Fz
+time_idx = erp_times >= 600 & erp_times <= 1200;
+tmp = mean(squeeze(erp_agen00(:, 11, time_idx)) - squeeze(erp_agen10(:, 11, time_idx)), 2);
+motivation_diffs = T.moti_accu - T.moti_flip;
+
+figure()
+scatter(tmp, motivation_diffs)
+
+
+
+
+
+figure()
+for s = 1 : 39
+
+    subplot(7, 6, s)
+    pd1 = squeeze(erp_agen00(s, 11, :));
+    pd2 = squeeze(erp_agen10(s, 11, :));
+    plot(erp_times, pd1, 'k')
+    hold on
+    plot(erp_times, pd2, 'r')
+    title(subject_list{s})
+
+end
+
+
+
+
+
+
+
+
 
 
 
@@ -434,16 +539,16 @@ corrcoef(ave_clust_diffs, motivation_diffs')
 
 
 % Plot topos at selected time points
-clim = [-0.05, 0.3];
-tpoints = [200, 500, 800];
+clim = [-0.6, 0.6];
+tpoints = [400, 500, 600];
 for t = 1 : length(tpoints)
     figure('Visible', 'off'); clf;
     tidx = erp_times >= tpoints(t) - 5 & erp_times <= tpoints(t) + 5;
-    pd = mean(apes_agency(:, tidx), 2);
+    pd = mean(stat_diff_moti.rho(:, tidx), 2);
     topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
-    colormap(flipud(bone));
+    colormap(jet);
     caxis(clim);
-    saveas(gcf, [PATH_VEUSZ, 'topo_agency_', num2str(tpoints(t)), 'ms', '.png']);
+    saveas(gcf, [PATH_COR_RESULTS, 'topo_moti_corr_', num2str(tpoints(t)), 'ms', '.png']);
 end
 
 
