@@ -43,7 +43,6 @@ hz = linspace(0, EEG.srate, length(wtime));
 tf_freqs = linspace(frqrange(1), frqrange(2), n_frq);
 fwhmTs = linspace(tfres_range(1), tfres_range(2), n_frq);
 
-
 % Init matrices for wavelets
 cmw = zeros(length(tf_freqs), length(wtime));
 cmwX = zeros(length(tf_freqs), length(wtime));
