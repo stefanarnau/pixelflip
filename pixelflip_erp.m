@@ -104,6 +104,14 @@ for s = 1 : length(subject_list)
     % 12: Previous accuracy (-1 if previous trial in different block or previous trial not available or if previous trial response is missing)
     % 13: Previous flipped (-1 if previous trial in different block or previous trial not available)
 
+    % Convert trialinfo to table
+    trialinfo_table = array2table(trialinfo, 'VariableNames', {'trial_nr', 'block_nr', 'reliability', 'difficulty', 'flipped', ...
+                                                               'key_pressed', 'rt', 'color_pressed', 'feedback_accuracy', 'feedback_color', ...
+                                                               'accuracy', 'prev_accuracy', 'prev_flipped'});
+    writetable(EEG.trialinfo, [PATH_AUTOCLEANED, subject, '_erp_trialinfo.csv']);
+
+
+
     % Get trial-indices for main effect agency
     idx_agen00 = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
     idx_agen10 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
