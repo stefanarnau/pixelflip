@@ -136,6 +136,29 @@ def get_erpplot_and_stats(electrode_selection, stat_label, timewin_stats):
         .mean()
         .reset_index()
     )
+    
+    # Draw a pointplot
+    g = sns.catplot(
+        data=df_stats,
+        x="difficulty",
+        y="V",
+        hue="SoA",
+        capsize=0.2,
+        palette="rocket",
+        errorbar="se",
+        kind="point",
+        height=6,
+        aspect=0.75,
+    )
+    g.despine(left=True)
+    
+    # Save plot
+    plt.savefig(
+        os.path.join(path_res, "interaction_plot_" + stat_label + ".png"),
+        dpi=300,
+        transparent=True,
+    )
+
 
     # Save dataframe
     df_stats.to_csv(os.path.join(path_res, "stats_table_" + stat_label + ".csv"))
@@ -239,68 +262,32 @@ matrices_hard_10 = np.stack(matrices_hard_10)
 matrices_hard_11 = np.stack(matrices_hard_11)
 
 
-# Get ERP for Fz
+# Get ERP
+df_stats_Fp = get_erpplot_and_stats(
+    electrode_selection=["Fp1", "Fp2"], stat_label="Fp", timewin_stats=(0.4, 0.8)
+)
+
+aov_Fp = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Fp, detailed=True, effsize="np2")
+
+# Get ERP
 df_stats_Fz = get_erpplot_and_stats(
-    electrode_selection=["Fz", "Fp1", "Fp2"], stat_label="FCz", timewin_stats=(0.6, 1200)
+    electrode_selection=["Fz"], stat_label="Fz", timewin_stats=(0.4, 0.8)
 )
+aov_Fz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Fz, detailed=True, effsize="np2")
 
-# Draw a pointplot
-g = sns.catplot(
-    data=df_stats_Fz,
-    x="difficulty",
-    y="V",
-    hue="SoA",
-    capsize=0.2,
-    palette="rocket",
-    errorbar="se",
-    kind="point",
-    height=6,
-    aspect=0.75,
-)
-g.despine(left=True)
-
-# Get ERP for FCz
+# Get ERP
 df_stats_FCz = get_erpplot_and_stats(
-    electrode_selection=["FCz", "Fc1", "Fc2"], stat_label="FCz", timewin_stats=(0.6, 1200)
+    electrode_selection=["FCz"], stat_label="FCz", timewin_stats=(0.8, 1.2)
 )
-
-# Draw a pointplot
-g = sns.catplot(
-    data=df_stats_FCz,
-    x="difficulty",
-    y="V",
-    hue="SoA",
-    capsize=0.2,
-    palette="rocket",
-    errorbar="se",
-    kind="point",
-    height=6,
-    aspect=0.75,
-)
-g.despine(left=True)
+aov_FCz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_FCz, detailed=True, effsize="np2")
 
 
-# Get ERP for Cz
+# Get ERP
 df_stats_Cz = get_erpplot_and_stats(
-    electrode_selection=["Cz", "C1", "C2"], stat_label="FCz", timewin_stats=(0.6, 1200)
+    electrode_selection=["Cz"], stat_label="Cz", timewin_stats=(0.8, 1.2)
 )
-
-# Draw a pointplot
-g = sns.catplot(
-    data=df_stats_Cz,
-    x="difficulty",
-    y="V",
-    hue="SoA",
-    capsize=0.2,
-    palette="rocket",
-    errorbar="se",
-    kind="point",
-    height=6,
-    aspect=0.75,
-)
-g.despine(left=True)
+aov_Cz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Cz, detailed=True, effsize="np2")
 
 
 
-aov = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Fz, detailed=True, effsize="np2")
 
