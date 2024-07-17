@@ -16,7 +16,8 @@ import scipy.stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pingouin as pg
-import mne.stats as stats
+import mne.stats 
+import scipy.stats
 
 # Define paths
 path_in = "/mnt/data_dump/pixelflip/2_cleaned/"
@@ -132,8 +133,12 @@ def get_erpplot_and_stats(electrode_selection, stat_label, timewin_stats):
 
     # Get dataframe statistical analysis (average is timewin)
     df_stats = df_frontal_erp.drop(df_frontal_erp[df_frontal_erp.in_statwin != 1].index)
-    df_stats = df_stats.groupby(["id", "SoA", "difficulty"])["V"].mean().reset_index()
-
+    df_stats = (
+        df_stats.groupby(["id", "SoA", "difficulty"])["V"]
+        .mean()
+        .reset_index()
+    )
+    
     # Draw a pointplot
     g = sns.catplot(
         data=df_stats,
@@ -148,13 +153,14 @@ def get_erpplot_and_stats(electrode_selection, stat_label, timewin_stats):
         aspect=0.75,
     )
     g.despine(left=True)
-
+    
     # Save plot
     plt.savefig(
         os.path.join(path_res, "interaction_plot_" + stat_label + ".png"),
         dpi=300,
         transparent=True,
     )
+
 
     # Save dataframe
     df_stats.to_csv(os.path.join(path_res, "stats_table_" + stat_label + ".csv"))
@@ -257,176 +263,49 @@ matrices_hard_00 = np.stack(matrices_hard_00)
 matrices_hard_10 = np.stack(matrices_hard_10)
 matrices_hard_11 = np.stack(matrices_hard_11)
 
+aa=bb
 
-# Get ERP Fp
-df_stats_Fp_early = get_erpplot_and_stats(
+pval = 0.05 # arbitrary
+n_conditions = 2
+n_observations = 20
+dfn = n_conditions - 1  # degrees of freedom numerator
+dfd = n_observations - n_conditions  # degrees of freedom denominator
+thresh = scipy.stats.f.ppf(1 - pval, dfn=dfn, dfd=dfd)  # F distribution
+
+test_data = [(matrices_easy_00[:, 64, :] + matrices_hard_00[:, 64, :]) / 2, 
+             (matrices_easy_10[:, 64, :] + matrices_hard_10[:, 64, :]) / 2]   
+
+cluster_stats = mne.stats.permutation_cluster_test(test_data, threshold=thresh)
+
+# Unpack
+T_obs, clusters, p_values, _ = cluster_stats
+
+# Get ERP
+df_stats_Fp = get_erpplot_and_stats(
     electrode_selection=["Fp1", "Fp2"], stat_label="Fp", timewin_stats=(0.4, 0.8)
 )
-aov_Fp_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Fp_early,
-    detailed=True,
-    effsize="np2",
+
+aov_Fp = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Fp, detailed=True, effsize="np2")
+
+# Get ERP
+df_stats_Fz = get_erpplot_and_stats(
+    electrode_selection=["Fz"], stat_label="Fz", timewin_stats=(0.4, 0.8)
 )
+aov_Fz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Fz, detailed=True, effsize="np2")
+
+# Get ERP
+df_stats_FCz = get_erpplot_and_stats(
+    electrode_selection=["FCz"], stat_label="FCz", timewin_stats=(0.8, 1.2)
+)
+aov_FCz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_FCz, detailed=True, effsize="np2")
 
 
-df_stats_Fp_late = get_erpplot_and_stats(
-    electrode_selection=["Fp1", "Fp2"], stat_label="Fp", timewin_stats=(0.8, 1.2)
+# Get ERP
+df_stats_Cz = get_erpplot_and_stats(
+    electrode_selection=["Cz"], stat_label="Cz", timewin_stats=(0.8, 1.2)
 )
-aov_Fp_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Fp_late,
-    detailed=True,
-    effsize="np2",
-)
-
-# Get ERP Fz
-df_stats_Fz_early = get_erpplot_and_stats(
-    electrode_selection=["Fz", "F1", "F2"], stat_label="Fz", timewin_stats=(0.4, 0.8)
-)
-aov_Fz_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Fz_early,
-    detailed=True,
-    effsize="np2",
-)
+aov_Cz = pg.rm_anova(dv='V', within=['SoA', 'difficulty'], subject='id', data=df_stats_Cz, detailed=True, effsize="np2")
 
 
-df_stats_Fz_late = get_erpplot_and_stats(
-    electrode_selection=["Fz", "F1", "F2"], stat_label="Fz", timewin_stats=(0.8, 1.2)
-)
-aov_Fz_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Fz_late,
-    detailed=True,
-    effsize="np2",
-)
-
-# Get ERP FCz
-df_stats_FCz_early = get_erpplot_and_stats(
-    electrode_selection=["FCz", "FC1", "FC2"],
-    stat_label="FCz",
-    timewin_stats=(0.4, 0.8),
-)
-aov_FCz_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_FCz_early,
-    detailed=True,
-    effsize="np2",
-)
 
 
-df_stats_FCz_late = get_erpplot_and_stats(
-    electrode_selection=["FCz", "FC1", "FC2"],
-    stat_label="FCz",
-    timewin_stats=(0.8, 1.2),
-)
-aov_FCz_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_FCz_late,
-    detailed=True,
-    effsize="np2",
-)
-
-
-# Get ERP Cz
-df_stats_Cz_early = get_erpplot_and_stats(
-    electrode_selection=["Cz", "C1", "C2"],
-    stat_label="Cz",
-    timewin_stats=(0.4, 0.8),
-)
-aov_Cz_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Cz_early,
-    detailed=True,
-    effsize="np2",
-)
-
-
-df_stats_Cz_late = get_erpplot_and_stats(
-    electrode_selection=["Cz", "C1", "C2"],
-    stat_label="Cz",
-    timewin_stats=(0.8, 1.2),
-)
-aov_Cz_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Cz_late,
-    detailed=True,
-    effsize="np2",
-)
-
-# Get ERP Pz
-df_stats_Pz_early = get_erpplot_and_stats(
-    electrode_selection=["Pz", "P1", "P2"],
-    stat_label="Pz",
-    timewin_stats=(0.4, 0.8),
-)
-aov_Pz_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Pz_early,
-    detailed=True,
-    effsize="np2",
-)
-
-
-df_stats_Pz_late = get_erpplot_and_stats(
-    electrode_selection=["Pz", "P1", "P2"],
-    stat_label="Pz",
-    timewin_stats=(0.8, 1.2),
-)
-aov_Pz_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_Pz_late,
-    detailed=True,
-    effsize="np2",
-)
-
-# Get ERP POz
-df_stats_POz_early = get_erpplot_and_stats(
-    electrode_selection=["POz", "PO1", "PO2"],
-    stat_label="POz",
-    timewin_stats=(0.4, 0.8),
-)
-aov_POz_early = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_POz_early,
-    detailed=True,
-    effsize="np2",
-)
-
-
-df_stats_POz_late = get_erpplot_and_stats(
-    electrode_selection=["POz", "PO1", "PO2"],
-    stat_label="POz",
-    timewin_stats=(0.8, 1.2),
-)
-aov_POz_late = pg.rm_anova(
-    dv="V",
-    within=["SoA", "difficulty"],
-    subject="id",
-    data=df_stats_POz_late,
-    detailed=True,
-    effsize="np2",
-)
