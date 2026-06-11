@@ -1,7 +1,7 @@
 clear all;
 
 % PATH VARS - PLEASE ADJUST!!!!!
-PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
+PATH_EEGLAB      = '/home/plkn/eeglab2025.0.0/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_VEUSZ       = '/mnt/data_dump/pixelflip/veusz/cue_erp_state/';  
 
