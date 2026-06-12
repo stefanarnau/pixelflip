@@ -11,14 +11,21 @@ from mne.channels import find_ch_adjacency
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+# Alpha settings
+alpha_l_freq, alpha_h_freq = 16, 30
+baseline = (-0.5, -0.2)
+use_raw = False
+
 # Bins
-all_erp_rows = []
+all_alpha_rows = []
 
 # Define paths
 path_in = "/mnt/data_dump/pixelflip/2_cleaned/"
 
 # Define datasets
-datasets = glob.glob(f"{path_in}/*cue_erp.set")
+datasets = glob.glob(f"{path_in}/*cue_tf.set")
+
+
 
 # Helpers ========================================================================================
 
@@ -41,8 +48,8 @@ def run_erp_cluster_test(
     ----------
     df : DataFrame
         Either df_state or df_sequence.
-        Must contain: subject, condition, difficulty, flip, slow_wave_uv.
-        slow_wave_uv must be array-shaped: n_channels x n_times.
+        Must contain: subject, condition, difficulty, flip, alpha_db.
+        alpha_db must be array-shaped: n_channels x n_times.
     effect : {"difficulty", "flip", "interaction"}
         Effect to test.
     times : array
@@ -86,7 +93,7 @@ def run_erp_cluster_test(
                 if len(row) != 1:
                     continue
 
-                arr = row.iloc[0]["slow_wave_uv"]  # channels x times
+                arr = row.iloc[0]["alpha_db"]  # channels x times
                 arr = arr[:, time_mask].T         # times x channels
                 cells[(diff, flip)] = arr
 
@@ -156,7 +163,7 @@ def run_erp_cluster_test(
     }
 
 def run_global_difficulty_cluster_test(
-    erp_df,
+    alpha_df,
     times,
     info,
     tmin,
@@ -174,7 +181,7 @@ def run_global_difficulty_cluster_test(
     subject_contrasts = []
     used_subjects = []
 
-    for subject, sub_df in erp_df.groupby("subject"):
+    for subject, sub_df in alpha_df.groupby("subject"):
 
         easy_rows = sub_df[sub_df["difficulty"] == "easy"]
         hard_rows = sub_df[sub_df["difficulty"] == "hard"]
@@ -184,12 +191,12 @@ def run_global_difficulty_cluster_test(
             continue
 
         easy = np.mean(
-            np.stack(easy_rows["slow_wave_uv"].values, axis=0),
+            np.stack(easy_rows["alpha_db"].values, axis=0),
             axis=0,
         )
 
         hard = np.mean(
-            np.stack(hard_rows["slow_wave_uv"].values, axis=0),
+            np.stack(hard_rows["alpha_db"].values, axis=0),
             axis=0,
         )
 
@@ -251,7 +258,7 @@ def run_global_difficulty_cluster_test(
         "ch_names": info["ch_names"],
     }
 
-def plot_erp_cluster(
+def plot_alpha_cluster(
     res,
     df,
     info,
@@ -296,7 +303,7 @@ def plot_erp_cluster(
         cells = {}
 
         for _, row in sub_df.iterrows():
-            cells[(row["difficulty"], row["flip"])] = row["slow_wave_uv"]
+            cells[(row["difficulty"], row["flip"])] = row["alpha_db"]
 
         if effect == "difficulty":
 
@@ -584,62 +591,110 @@ def plot_erp_cluster(
 # Loop datasets
 for dataset in datasets:
 
-    # Get id
     subject_id = int(dataset.split("/")[-1].split("_")[0].split("VP")[1])
 
-    # Skip VP 07 (age outlier)
     if subject_id == 7:
         continue
 
-    # Load a dataset
+    # Load epochs; do NOT voltage-baseline-correct for alpha
     eeg_epochs = (
         mne.io.read_epochs_eeglab(dataset)
-        .apply_baseline(baseline=(-0.2, 0))
-        .crop(tmin=-0.2, tmax=1.8)
+        .load_data()
+        .crop(tmin=-0.5, tmax=1.8)
     )
 
-    # Save times
-    erp_times = eeg_epochs.times
+    tf_times = eeg_epochs.times
+    trialinfo = pd.read_csv(dataset.split("_cleaned_")[0] + "_tf_trialinfo.csv")
 
-    # Load trialinfo
-    trialinfo = pd.read_csv(dataset.split("_cleaned_")[0] + "_erp_trialinfo.csv")
+    assert len(trialinfo) == len(eeg_epochs), dataset
 
-    # Get trial indices
+    # ------------------------------------------------------------------
+    # Alpha power via filter-Hilbert
+    # ------------------------------------------------------------------
+
+    alpha_epochs = eeg_epochs.copy().filter(
+        l_freq=alpha_l_freq,
+        h_freq=alpha_h_freq,
+        method="fir",
+        phase="zero",
+        fir_design="firwin",
+        verbose=False,
+    )
+
+    # Hilbert envelope = alpha amplitude
+    alpha_epochs.apply_hilbert(
+        envelope=True,
+        verbose=False,
+    )
+
+    # Power = amplitude squared
+    alpha_power = alpha_epochs.get_data() ** 2
+    # shape: trials x channels x times
+
+    # ------------------------------------------------------------------
+    # Condition-general baseline correction
+    # ------------------------------------------------------------------
+
+    baseline_mask = (
+        (tf_times >= baseline[0])
+        & (tf_times <= baseline[1])
+    )
+
+    # Average baseline across ALL trials and baseline timepoints,
+    # separately for each channel
+    baseline_power = alpha_power[:, :, baseline_mask].mean(
+        axis=(0, 2),
+        keepdims=True,
+    )
+    # shape: 1 x channels x 1
+
+    # dB baseline correction relative to condition-general baseline
+    alpha_power_db = 10 * np.log10(alpha_power / baseline_power)
+
+    # ------------------------------------------------------------------
+    # Same condition coding as CNV script
+    # ------------------------------------------------------------------
+
     idx_easy_00 = np.where(
         (trialinfo.difficulty == 0)
         & (trialinfo.reliability == 1)
         & (trialinfo.prev_accuracy == 1)
     )[0]
+
     idx_easy_10 = np.where(
         (trialinfo.difficulty == 0)
         & (trialinfo.reliability == 0)
         & (trialinfo.prev_accuracy == 1)
         & (trialinfo.prev_flipped == 0)
     )[0]
+
     idx_easy_11 = np.where(
         (trialinfo.difficulty == 0)
         & (trialinfo.reliability == 0)
         & (trialinfo.prev_accuracy == 1)
         & (trialinfo.prev_flipped == 1)
     )[0]
+
     idx_hard_00 = np.where(
         (trialinfo.difficulty == 1)
         & (trialinfo.reliability == 1)
         & (trialinfo.prev_accuracy == 1)
     )[0]
+
     idx_hard_10 = np.where(
         (trialinfo.difficulty == 1)
         & (trialinfo.reliability == 0)
         & (trialinfo.prev_accuracy == 1)
         & (trialinfo.prev_flipped == 0)
     )[0]
+
     idx_hard_11 = np.where(
         (trialinfo.difficulty == 1)
         & (trialinfo.reliability == 0)
         & (trialinfo.prev_accuracy == 1)
         & (trialinfo.prev_flipped == 1)
     )[0]
-    
+
     conditions = {
         "easy_00": idx_easy_00,
         "easy_10": idx_easy_10,
@@ -648,46 +703,38 @@ for dataset in datasets:
         "hard_10": idx_hard_10,
         "hard_11": idx_hard_11,
     }
-    
-    # Get fs
-    sfreq = eeg_epochs.info["sfreq"]
-    
-    # Get channel labels
-    ch_names = eeg_epochs.ch_names
-    
+
     for cond_name, idx in conditions.items():
-    
+
         if len(idx) == 0:
             continue
-        
-        # Calculate evoked for condition
-        evoked = eeg_epochs[idx].average()
-        
-        # Get erp times
-        erp_times = evoked.times
-        
-        # Append erp waveforms
-        all_erp_rows.append({
+
+        alpha_data = alpha_power if use_raw else alpha_power_db
+        cond_alpha = alpha_data[idx].mean(axis=0)
+            
+        # shape: channels x times
+
+        all_alpha_rows.append({
             "subject": subject_id,
             "condition": cond_name,
             "n_trials": len(idx),
-            "slow_wave_uv": evoked.data * 1e6,
+            "alpha_db": cond_alpha,
         })
             
-# Create erp df
-erp_df = pd.DataFrame(all_erp_rows)
+# Create alpha df
+alpha_df = pd.DataFrame(all_alpha_rows)
 
 # Recode
-erp_df["difficulty"] = erp_df["condition"].str.split("_").str[0]
+alpha_df["difficulty"] = alpha_df["condition"].str.split("_").str[0]
 
-erp_df["difficulty"] = pd.Categorical(
-    erp_df["difficulty"],
+alpha_df["difficulty"] = pd.Categorical(
+    alpha_df["difficulty"],
     categories=["easy", "hard"],
     ordered=True,
 )
 
-erp_df["flip"] = (
-    erp_df["condition"]
+alpha_df["flip"] = (
+    alpha_df["condition"]
     .str.split("_")
     .str[1]
     .map({
@@ -697,23 +744,23 @@ erp_df["flip"] = (
     })
 )
 
-erp_df["flip"] = pd.Categorical(
-    erp_df["flip"],
+alpha_df["flip"] = pd.Categorical(
+    alpha_df["flip"],
     categories=["Stable", "Volatile", "Post-Flip"],
     ordered=True,
 )
 
-df_state = erp_df[
-    erp_df["flip"].isin(["Stable", "Volatile"])
+df_state = alpha_df[
+    alpha_df["flip"].isin(["Stable", "Volatile"])
 ].copy()
 
-df_sequence = erp_df[
-    erp_df["flip"].isin(["Volatile", "Post-Flip"])
+df_sequence = alpha_df[
+    alpha_df["flip"].isin(["Volatile", "Post-Flip"])
 ].copy()
 
 res_global_difficulty = run_global_difficulty_cluster_test(
-    erp_df=erp_df,
-    times=erp_times,
+    alpha_df=alpha_df,
+    times=tf_times,
     info=eeg_epochs.info,
     tmin=0,
     tmax=1.2,
@@ -722,7 +769,7 @@ res_global_difficulty = run_global_difficulty_cluster_test(
 res_state_flip = run_erp_cluster_test(
     df=df_state,
     effect="flip",
-    times=erp_times,
+    times=tf_times,
     info=eeg_epochs.info,
     tmin=0,
     tmax=1.2,
@@ -731,7 +778,7 @@ res_state_flip = run_erp_cluster_test(
 res_sequence_flip = run_erp_cluster_test(
     df=df_sequence,
     effect="flip",
-    times=erp_times,
+    times=tf_times,
     info=eeg_epochs.info,
     tmin=0,
     tmax=1.2,
@@ -740,7 +787,7 @@ res_sequence_flip = run_erp_cluster_test(
 res_state_interaction = run_erp_cluster_test(
     df=df_state,
     effect="interaction",
-    times=erp_times,
+    times=tf_times,
     info=eeg_epochs.info,
     tmin=0,
     tmax=1.2,
@@ -749,7 +796,7 @@ res_state_interaction = run_erp_cluster_test(
 res_sequence_interaction = run_erp_cluster_test(
     df=df_sequence,
     effect="interaction",
-    times=erp_times,
+    times=tf_times,
     info=eeg_epochs.info,
     tmin=0,
     tmax=1.2,
@@ -758,7 +805,7 @@ res_sequence_interaction = run_erp_cluster_test(
 
 # Collect results
 results = {
-    "Difficulty": (res_global_difficulty, erp_df),
+    "Difficulty": (res_global_difficulty, alpha_df),
     "State": (res_state_flip, df_state),
     "Sequence": (res_sequence_flip, df_sequence),
     "Difficulty × State": (res_state_interaction, df_state),
@@ -784,7 +831,7 @@ for name, (res, df) in results.items():
         f"p = {res['cluster_p_values'][best_cluster]:.4f}"
     )
 
-    fig = plot_erp_cluster(
+    fig = plot_alpha_cluster(
         res=res,
         df=df,
         info=eeg_epochs.info,
@@ -792,3 +839,7 @@ for name, (res, df) in results.items():
     )
 
     plt.show()
+    
+    
+    
+    
