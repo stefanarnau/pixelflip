@@ -1,9 +1,9 @@
 clear all;
 
-% PATH VARS
+% Path variables
 PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
-PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
-PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/ersps/';
+PATH_TF_DATA     = '/mnt/data_dump/pixelflip/3_tf_data/';
+PATH_TF_RESULTS  = '/mnt/data_dump/pixelflip/5_tf_results/';
 
 % Subject list
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
@@ -13,208 +13,449 @@ subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 
 
 % Exclude from analysis
 subject_list = setdiff(subject_list, {'VP07'}); % Age outlier
-    
+
 % Init eeglab
 addpath(PATH_EEGLAB);
 eeglab;
 
-% SWITCH: Switch parts of script on/off
-to_execute = {'part1'};
+% Init fieldtrip
+ft_path = '/home/plkn/fieldtrip-master/';
+addpath(ft_path);
+ft_defaults;
 
-% Part 1: Calculate ersp
-if ismember('part1', to_execute)
+% Load metadata
+load([PATH_TF_DATA, 'chanlocs.mat']);
+load([PATH_TF_DATA, 'tf_freqs.mat']);
+load([PATH_TF_DATA, 'tf_times.mat']);
+load([PATH_TF_DATA, 'neighbours.mat']);
+load([PATH_TF_DATA, 'obs_fwhmT.mat']);
+load([PATH_TF_DATA, 'obs_fwhmF.mat']);
 
-    % Load data
-    EEG = pop_loadset('filename', [subject_list{1}, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+% Remember number of trials of conditions
+n_trials = [];
 
-    % Set complex Morlet wavelet parameters
-    n_frq = 30;
-    frqrange = [2, 20];
-    tfres_range = [600, 300];
+% ERSP matrices
+ersp_agen00 = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen10 = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen11 = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_easy = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_hard = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen00_easy = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen00_hard = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen10_easy = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen10_hard = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen11_easy = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
+ersp_agen11_hard = zeros(length(subject_list), 65, length(tf_freqs), length(tf_times));
 
-    % Set wavelet time
-    wtime = -2 : 1 / EEG.srate : 2;
+% Loop subjects
+for s = 1 : length(subject_list)
 
-    % Determine fft frqs
-    hz = linspace(0, EEG.srate, length(wtime));
+    % Get subject id as string
+    subject = subject_list{s};
 
-    % Create wavelet frequencies and tapering Gaussian widths in temporal domain
-    tf_freqs = logspace(log10(frqrange(1)), log10(frqrange(2)), n_frq);
-    fwhmTs = logspace(log10(tfres_range(1)), log10(tfres_range(2)), n_frq);
+    % Load trialinfo
+    load([PATH_TF_DATA, 'trialinfo_', subject, '.mat']);
 
-    % Init matrices for wavelets
-    cmw = zeros(length(tf_freqs), length(wtime));
-    cmwX = zeros(length(tf_freqs), length(wtime));
-    tlim = zeros(1, length(tf_freqs));
+    % Trialinfo columns:
+    % 01: trial_nr
+    % 02: block_nr
+    % 03: reliability
+    % 04: difficulty
+    % 05: flipped
+    % 06: key_pressed
+    % 07: rt
+    % 08: color_pressed
+    % 09: feedback_accuracy
+    % 10: feedback_color
+    % 11: accuracy  
+    % 12: Previous accuracy (-1 if previous trial in different block or previous trial not available or if previous trial response is missing)
+    % 13: Previous flipped (-1 if previous trial in different block or previous trial not available)
 
-    % These will contain the wavelet widths as full width at 
-    % half maximum in the temporal and spectral domain
-    obs_fwhmT = zeros(1, length(tf_freqs));
-    obs_fwhmF = zeros(1, length(tf_freqs));
+    % Get trial-indices for main effect agency
+    idx_agen00 = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
+    idx_agen10 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 0;
+    idx_agen11 = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 13) == 1;
 
-    % Create the wavelets
-    for frq = 1 : length(tf_freqs)
+    % Get trial-indices for main effect difficulty
+    idx_easy = trialinfo(:, 4) == 0 & trialinfo(:, 12) == 1;
+    idx_hard = trialinfo(:, 4) == 1 & trialinfo(:, 12) == 1;
 
-        % Create wavelet with tapering gaussian corresponding to desired width in temporal domain
-        cmw(frq, :) = exp(2 * 1i * pi * tf_freqs(frq) .* wtime) .* exp((-4 * log(2) * wtime.^2) ./ (fwhmTs(frq) / 1000)^2);
+    % Get trial-indices for factor combinations
+    idx_agen00_easy = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
+    idx_agen00_hard = trialinfo(:, 3) == 1 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
+    idx_agen10_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 0;
+    idx_agen10_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 0;
+    idx_agen11_easy = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 0 & trialinfo(:, 13) == 1;
+    idx_agen11_hard = trialinfo(:, 3) == 0 & trialinfo(:, 12) == 1 & trialinfo(:, 4) == 1 & trialinfo(:, 13) == 1;
 
-        % Normalize wavelet
-        cmw(frq, :) = cmw(frq, :) ./ max(cmw(frq, :));
+    % Loop channels
+    for ch = 1 : 65
 
-        % Create normalized freq domain wavelet
-        cmwX(frq, :) = fft(cmw(frq, :)) ./ max(fft(cmw(frq, :)));
+        % Talk
+        fprintf('\nRead data | subject %i/%i | channel %i/%i\n', s, length(subject_list), ch, 65);
 
-        % Determine observed fwhmT
-        midt = dsearchn(wtime', 0);
-        cmw_amp = abs(cmw(frq, :)) ./ max(abs(cmw(frq, :))); % Normalize cmw amplitude
-        obs_fwhmT(frq) = wtime(midt - 1 + dsearchn(cmw_amp(midt : end)', 0.5)) - wtime(dsearchn(cmw_amp(1 : midt)', 0.5));
+        % Load power data
+        load([PATH_TF_DATA, 'powcube_', subject, '_chan_', num2str(ch), '.mat']);
+        powcube = double(powcube);
 
-        % Determine observed fwhmF
-        idx = dsearchn(hz', tf_freqs(frq));
-        cmwx_amp = abs(cmwX(frq, :)); 
-        obs_fwhmF(frq) = hz(idx - 1 + dsearchn(cmwx_amp(idx : end)', 0.5) - dsearchn(cmwx_amp(1 : idx)', 0.5));
+        % Define baseline time window
+        ersp_bl = [-500, 0];
 
-    end
+        % Get condition general baseline values
+        tmp = squeeze(mean(powcube, 3));
+        [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        bl_condition_general = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
-    % Define time window of analysis
-    prune_times = [-500, 2200]; 
-    tf_times = EEG.times(dsearchn(EEG.times', prune_times(1)) : dsearchn(EEG.times', prune_times(2)));
+        % Calculate ERSPs using condition-specific baselines 
+        ersp_agen00(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00), 3)), bl_condition_general)));
+        ersp_agen10(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10), 3)), bl_condition_general)));
+        ersp_agen11(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11), 3)), bl_condition_general)));
+        ersp_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy), 3)), bl_condition_general)));
+        ersp_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard), 3)), bl_condition_general)));
+        ersp_agen00_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_easy), 3)), bl_condition_general)));
+        ersp_agen00_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_hard), 3)), bl_condition_general)));
+        ersp_agen10_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_easy), 3)), bl_condition_general)));
+        ersp_agen10_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_hard), 3)), bl_condition_general)));
+        ersp_agen11_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_easy), 3)), bl_condition_general)));
+        ersp_agen11_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_hard), 3)), bl_condition_general)));
 
-    % Result struct
-    chanlocs = EEG.chanlocs;
-    ersp_easy_accu = single(zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times)));
-    ersp_easy_flip = single(zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times)));
-    ersp_hard_accu = single(zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times)));
-    ersp_hard_flip = single(zeros(length(subject_list), EEG.nbchan, length(tf_freqs), length(tf_times)));
+        % % Get condition specific baseline values
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11 = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen00_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen00_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen10_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen10_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11_easy), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11_easy = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+        % tmp = squeeze(mean(powcube(:, :, idx_agen11_hard), 3));
+        % [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
+        % [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
+        % bl_agen11_hard = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
-    % Loop subjects
-    for s = 1 : length(subject_list)
+        % % Calculate ERSPs using condition-specific baselines 
+        % ersp_agen00(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00), 3)), bl_agen00)));
+        % ersp_agen10(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10), 3)), bl_agen10)));
+        % ersp_agen11(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11), 3)), bl_agen11)));
+        % ersp_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy), 3)), bl_easy)));
+        % ersp_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard), 3)), bl_hard)));
+        % ersp_agen00_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_easy), 3)), bl_agen00_easy)));
+        % ersp_agen00_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen00_hard), 3)), bl_agen00_hard)));
+        % ersp_agen10_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_easy), 3)), bl_agen10_easy)));
+        % ersp_agen10_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen10_hard), 3)), bl_agen10_hard)));
+        % ersp_agen11_easy(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_easy), 3)), bl_agen11_easy)));
+        % ersp_agen11_hard(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_agen11_hard), 3)), bl_agen11_hard)));
 
-        % Get id stuff
-        subject = subject_list{s};
-        id = str2num(subject(3 : 4));
+    end % end channel loop
 
-        % Load data
-        EEG = pop_loadset('filename', [subject, '_cleaned_cue_tf.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'all');
+end % End subject loop
 
-        % To double precision
-        eeg_data = double(EEG.data);
+% Prune again to focus cluster permutation testing of cue-target interval
+prune_times = [-500, 1200];
+time_idx = dsearchn(tf_times', prune_times(1)) : dsearchn(tf_times', prune_times(2));
+tf_times = tf_times(time_idx);
+ersp_agen00 = ersp_agen00(:, :, :, time_idx);
+ersp_agen10 = ersp_agen10(:, :, :, time_idx);
+ersp_agen11 = ersp_agen11(:, :, :, time_idx);
+ersp_easy = ersp_easy(:, :, :, time_idx);
+ersp_hard = ersp_hard(:, :, :, time_idx);
+ersp_agen00_easy = ersp_agen00_easy(:, :, :, time_idx);
+ersp_agen00_hard = ersp_agen00_hard(:, :, :, time_idx);
+ersp_agen10_easy = ersp_agen10_easy(:, :, :, time_idx);
+ersp_agen10_hard = ersp_agen10_hard(:, :, :, time_idx);
+ersp_agen11_easy = ersp_agen11_easy(:, :, :, time_idx);
+ersp_agen11_hard = ersp_agen11_hard(:, :, :, time_idx);
 
-        % Trialinfo columns:
-        % 01: trial_nr
-        % 02: block_nr
-        % 03: reliability
-        % 04: difficulty
-        % 05: flipped
-        % 06: key_pressed
-        % 07: rt
-        % 08: color_pressed
-        % 09: feedback_accuracy
-        % 10: feedback_color
-        % 11: accuracy  
+% Get channel labels
+chanlabs = {};
+for c = 1 : numel(chanlocs)
+    chanlabs{c} = chanlocs(c).labels;
+end
 
-        % Get condition idx
-        idx_easy_accu = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 1;
-        idx_easy_flip = EEG.trialinfo(:, 4) == 0 & EEG.trialinfo(:, 3) == 0;
-        idx_hard_accu = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 1;
-        idx_hard_flip = EEG.trialinfo(:, 4) == 1 & EEG.trialinfo(:, 3) == 0;
+% A template for GA structs
+cfg=[];
+cfg.keepindividual = 'yes';
+ga_template = [];
+ga_template.dimord = 'chan_freq_time';
+ga_template.label = chanlabs;
+ga_template.freq = tf_freqs;
+ga_template.time = tf_times;
 
-        % Loop channels
-        for ch = 1 : EEG.nbchan
+% GA struct agen00
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen00(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_agen00 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Init tf matrices
-            powcube = NaN(length(tf_freqs), EEG.pnts, EEG.trials);
+% GA struct agen10
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen10(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_agen10 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Talk
-            fprintf('\ntf-decomposition | subject %i/%i | channel %i/%i\n', s, length(subject_list), ch, EEG.nbchan);
+% GA struct agen11
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen11(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_agen11 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Get component signal
-            channel_data = squeeze(eeg_data(ch, :, :));
+% GA struct easy
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_easy(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_easy = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % convolution length
-            convlen = size(channel_data, 1) * size(channel_data, 2) + size(cmw, 2) - 1;
+% GA struct hard
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_hard(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_hard = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % cmw to freq domain and scale
-            cmwX = zeros(length(tf_freqs), convlen);
-            for f = 1 : length(tf_freqs)
-                cmwX(f, :) = fft(cmw(f, :), convlen);
-                cmwX(f, :) = cmwX(f, :) ./ max(cmwX(f, :));
-            end
+% GA diff agen00 (hard - easy)
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen00_hard(s, :, :, :)) - squeeze(ersp_agen00_easy(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_diff_agen00 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Get TF-power
-            tmp = fft(reshape(channel_data, 1, []), convlen);
-            for f = 1 : length(tf_freqs)
-                as = ifft(cmwX(f, :) .* tmp); 
-                as = as(((size(cmw, 2) - 1) / 2) + 1 : end - ((size(cmw, 2) - 1) / 2));
-                as = reshape(as, EEG.pnts, EEG.trials);
-                powcube(f, :, :) = abs(as) .^ 2;   
-            end
-            
-            % Cut edges
-            powcube = powcube(:, dsearchn(EEG.times', -500) : dsearchn(EEG.times', 2200), :);
+% GA diff agen10 (hard - easy)
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen10_hard(s, :, :, :)) - squeeze(ersp_agen10_easy(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_diff_agen10 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Get condition general baseline values
-            ersp_bl = [-500, -200];
-            tmp = squeeze(mean(powcube, 3));
-            [~, blidx1] = min(abs(tf_times - ersp_bl(1)));
-            [~, blidx2] = min(abs(tf_times - ersp_bl(2)));
-            blvals = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
+% GA diff agen11 (hard - easy)
+GA = {};
+for s = 1 : length(subject_list)
+    chan_time_data = squeeze(ersp_agen11_hard(s, :, :, :)) - squeeze(ersp_agen11_easy(s, :, :, :));
+    ga_template.powspctrm = chan_time_data;
+    GA{s} = ga_template;
+end 
+GA_diff_agen11 = ft_freqgrandaverage(cfg, GA{1, :});
 
-            % Calculate ersp
-            ersp_easy_accu(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy_accu), 3)), blvals)));
-            ersp_easy_flip(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_easy_flip), 3)), blvals)));
-            ersp_hard_accu(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard_accu), 3)), blvals)));
-            ersp_hard_flip(s, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, idx_hard_flip), 3)), blvals)));
+% Testparams
+testalpha  = 0.05;
+voxelalpha  = 0.01;
+nperm = 1000;
 
-        end % end channel loop
+% Set config
+cfg = [];
+cfg.tail             = 1;
+cfg.statistic        = 'depsamplesFmultivariate';
+cfg.alpha            = testalpha;
+cfg.neighbours       = neighbours;
+cfg.minnbchan        = 2;
+cfg.method           = 'montecarlo';
+cfg.correctm         = 'cluster';
+cfg.clustertail      = 1;
+cfg.clusteralpha     = voxelalpha;
+cfg.clusterstatistic = 'maxsum';
+cfg.numrandomization = nperm;
+cfg.computecritval   = 'yes'; 
+cfg.ivar             = 1;
+cfg.uvar             = 2;
 
-    end % end subject loop
+% Set up design
+n_subjects = length(subject_list);
+design = zeros(2, n_subjects * 2);
+design(1, :) = [ones(1, n_subjects), 2 * ones(1, n_subjects)];
+design(2, :) = [1 : n_subjects, 1 : n_subjects];
+cfg.design = design;
 
-    % Save shit
-    save([PATH_TF_DATA, 'chanlocs.mat'], 'chanlocs');
-    save([PATH_TF_DATA, 'tf_freqs.mat'], 'tf_freqs');
-    save([PATH_TF_DATA, 'tf_times.mat'], 'tf_times');
-    save([PATH_TF_DATA, 'ersp_easy_accu.mat'], 'ersp_easy_accu');
-    save([PATH_TF_DATA, 'ersp_easy_flip.mat'], 'ersp_easy_flip');
-    save([PATH_TF_DATA, 'ersp_hard_accu.mat'], 'ersp_hard_accu');
-    save([PATH_TF_DATA, 'ersp_hard_flip.mat'], 'ersp_hard_flip');
+% The tests
+[stat_agen_state]  = ft_freqstatistics(cfg, GA_agen00, GA_agen10);
+[stat_agen_sequence]  = ft_freqstatistics(cfg, GA_agen10, GA_agen11);
+[stat_difficulty]  = ft_freqstatistics(cfg, GA_easy, GA_hard);
+[stat_interaction_state] = ft_freqstatistics(cfg, GA_diff_agen00, GA_diff_agen10);
+[stat_interaction_sequence] = ft_freqstatistics(cfg, GA_diff_agen10, GA_diff_agen11);
 
-end % End part1
+% Save cluster structs
+save([PATH_TF_RESULTS 'stat_agen_state.mat'], 'stat_agen_state');
+save([PATH_TF_RESULTS 'stat_agen_sequence.mat'], 'stat_agen_sequence');
+save([PATH_TF_RESULTS 'stat_difficulty.mat'], 'stat_difficulty');
+save([PATH_TF_RESULTS 'stat_interaction_state.mat'], 'stat_interaction_state');
+save([PATH_TF_RESULTS 'stat_interaction_sequence.mat'], 'stat_interaction_sequence');
 
-% Part 2: Calculate ersp
-if ismember('part2', to_execute)
+% Save masks
+dlmwrite([PATH_TF_RESULTS, 'contour_agen_state.csv'], stat_agen_state.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_agen_sequence.csv'], stat_agen_sequence.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_difficulty.csv'], stat_difficulty.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_interaction_state.csv'], stat_interaction_state.mask);
+dlmwrite([PATH_TF_RESULTS, 'contour_interaction_sequence.csv'], stat_interaction_sequence.mask);
 
-    % Load shit
-    load([PATH_TF_DATA, 'chanlocs.mat']);
-    load([PATH_TF_DATA, 'tf_freqs.mat']);
-    load([PATH_TF_DATA, 'tf_times.mat']);
-    load([PATH_TF_DATA, 'ersp_easy_accu.mat']);
-    load([PATH_TF_DATA, 'ersp_easy_flip.mat']);
-    load([PATH_TF_DATA, 'ersp_hard_accu.mat']);
-    load([PATH_TF_DATA, 'ersp_hard_flip.mat']);
+% Calculate and save effect sizes
+apes_agen_state = [];
+apes_agen_sequence = [];
+apes_difficulty = [];
+apes_interaction_state = [];
+apes_interaction_sequence = [];
 
-    % Get theta idx
-    idx_theta = tf_freqs >= 4 & tf_freqs <= 7;
+for ch = 1 : 65
 
-    % Frontal channels idx
-    idx_frontal = [15, 19, 20, 65];
+    petasq = (squeeze(stat_agen_state.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_agen_state.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    apes_agen_state(ch, :, :) = adj_petasq;
 
-    % Average across channels and subjects and theta-frequencies
-    theta_easy_accu = squeeze(mean(ersp_easy_accu(:, idx_frontal, idx_theta, :), [1, 2, 3]));
-    theta_easy_flip = squeeze(mean(ersp_easy_flip(:, idx_frontal, idx_theta, :), [1, 2, 3]));
-    theta_hard_accu = squeeze(mean(ersp_hard_accu(:, idx_frontal, idx_theta, :), [1, 2, 3]));
-    theta_hard_flip = squeeze(mean(ersp_hard_flip(:, idx_frontal, idx_theta, :), [1, 2, 3]));
+    petasq = (squeeze(stat_agen_sequence.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_agen_sequence.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    apes_agen_sequence(ch, :, :) = adj_petasq;
 
-    % Plot
-    figure()
-    plot(tf_times, theta_easy_accu, 'k-', 'LineWidth', 2)
-    hold on;
-    plot(tf_times, theta_easy_flip, 'k:', 'LineWidth', 2)
-    plot(tf_times, theta_hard_accu, 'm-', 'LineWidth', 2)
-    plot(tf_times, theta_hard_flip, 'm:', 'LineWidth', 2)
-    legend({'easy-accurate', 'easy-flip', 'hard-accurate', 'hard-flip'})
-    title('Frontal Theta Power')
-    xline([0, 1200])
+    petasq = (squeeze(stat_difficulty.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_difficulty.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    apes_difficulty(ch, :, :) = adj_petasq;
 
+    petasq = (squeeze(stat_interaction_state.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_interaction_state.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    apes_interaction_state(ch, :, :) = adj_petasq;
+
+    petasq = (squeeze(stat_interaction_sequence.stat(ch, :, :)) .^ 2) ./ ((squeeze(stat_interaction_sequence.stat(ch, :, :)) .^ 2) + (n_subjects - 1));
+    adj_petasq = petasq - (1 - petasq) .* (1 / (n_subjects - 1));
+    apes_interaction_sequence(ch, :, :) = adj_petasq;
 
 end
+
+% Save effect sizes
+save([PATH_TF_RESULTS, 'apes_agen_state.mat'], 'apes_agen_state');
+save([PATH_TF_RESULTS, 'apes_agen_sequence.mat'], 'apes_agen_sequence');
+save([PATH_TF_RESULTS, 'apes_difficulty.mat'], 'apes_difficulty');
+save([PATH_TF_RESULTS, 'apes_interaction_state.mat'], 'apes_interaction_state');
+save([PATH_TF_RESULTS, 'apes_interaction_sequence.mat'], 'apes_interaction_sequence');
+
+% Identify significant clusters
+clust_thresh = 0.1;
+clusts = struct();
+cnt = 0;
+stat_names = {'stat_agen_state', 'stat_agen_sequence', 'stat_difficulty', 'stat_interaction_state', 'stat_interaction_sequence'};
+for s = 1 : numel(stat_names)
+    stat = eval(stat_names{s});
+    if ~isempty(stat.posclusters)
+        pos_idx = find([stat.posclusters(1, :).prob] < clust_thresh);
+        for c = 1 : numel(pos_idx)
+            cnt = cnt + 1;
+            clusts(cnt).testlabel = stat_names{s};
+            clusts(cnt).clustnum = cnt;
+            clusts(cnt).time = stat.time;
+            clusts(cnt).freq = stat.freq;
+            clusts(cnt).prob = stat.posclusters(1, pos_idx(c)).prob;
+            clusts(cnt).idx = stat.posclusterslabelmat == pos_idx(c);
+            clusts(cnt).stats = clusts(cnt).idx .* stat.stat;
+            clusts(cnt).chans_sig = find(logical(mean(clusts(cnt).idx, [2, 3])));
+        end
+    end
+end
+
+% Plot identified cluster
+clinecol = 'k';
+cmap = 'jet';
+for cnt = 1 : numel(clusts)
+
+    figure('Visible', 'off'); clf;
+
+    subplot(2, 2, 1)
+    pd = squeeze(sum(clusts(cnt).stats, 1));
+    contourf(clusts(cnt).time, clusts(cnt).freq, pd, 40, 'linecolor','none')
+    hold on
+    contour(clusts(cnt).time, clusts(cnt).freq, logical(squeeze(mean(clusts(cnt).idx, 1))), 1, 'linecolor', clinecol, 'LineWidth', 2)
+    colormap(cmap)
+    set(gca, 'xlim', [clusts(cnt).time(1), clusts(cnt).time(end)], 'clim', [-max(abs(pd(:))), max(abs(pd(:)))], 'YScale', 'lin', 'YTick', [4, 8, 12, 20])
+    colorbar;
+    title(['sum t across chans '], 'FontSize', 10)
+
+    subplot(2, 2, 2)
+    pd = squeeze(mean(clusts(cnt).idx, 1));
+    contourf(clusts(cnt).time, clusts(cnt).freq, pd, 40, 'linecolor','none')
+    hold on
+    contour(clusts(cnt).time, clusts(cnt).freq, logical(squeeze(mean(clusts(cnt).idx, 1))), 1, 'linecolor', clinecol, 'LineWidth', 2)
+    colormap(cmap)
+    set(gca, 'xlim', [clusts(cnt).time(1), clusts(cnt).time(end)], 'clim', [-1, 1], 'YScale', 'lin', 'YTick', [4, 8, 12, 20])
+    colorbar;
+    title(['proportion chans significant'], 'FontSize', 10)
+
+    subplot(2, 2, 3)
+    pd = squeeze(sum(clusts(cnt).stats, [2, 3]));
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(cmap)
+    set(gca, 'clim', [-max(abs(pd(:))), max(abs(pd(:)))])
+    colorbar;
+    title(['sum t per electrode'], 'FontSize', 10)
+
+    subplot(2, 2, 4)
+    pd = squeeze(mean(clusts(cnt).idx, [2, 3]));
+    topoplot(pd, chanlocs, 'plotrad', 0.7, 'intrad', 0.7, 'intsquare', 'on', 'conv', 'off', 'electrodes', 'on');
+    colormap(cmap)
+    set(gca, 'clim', [-1, 1])
+    colorbar;
+    title(['proportion tf-points significant'], 'FontSize', 10)
+
+    saveas(gcf, [PATH_TF_RESULTS 'clustnum_' num2str(clusts(cnt).clustnum) '_' clusts(cnt).testlabel '.png']); 
+
+end
+
+
+
+% Plot some effect sizes
+figure()
+pd = squeeze(mean(apes_agen_state, 1));
+contourf(tf_times, tf_freqs, pd, 40, 'linecolor','none')
+clim([0, 0.5])
+colormap(hot)
+
+th00 = squeeze(mean(GA_agen00.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+th10 = squeeze(mean(GA_agen10.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+th11 = squeeze(mean(GA_agen11.powspctrm(:, 65, tf_freqs >= 4 & tf_freqs <= 7, :), [1, 3]));
+figure()
+plot(tf_times, [th00,th10,th11])
+legend({'00','10','11'})

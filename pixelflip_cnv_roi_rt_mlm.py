@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 import mne.stats 
 import mne
-import matplotlib.pyplot as plt
+import statsmodels.formula.api as smf
+from scipy import stats
+
 
 # Bins
 all_erp_rows = []
@@ -145,9 +147,7 @@ trial_cnv_df["flip"] = pd.Categorical(
 
 
 
-import numpy as np
-import pandas as pd
-import statsmodels.formula.api as smf
+
 
 df = trial_cnv_df.copy()
 
@@ -191,25 +191,70 @@ df["cnv_strength_subject_mean_c"] = (
     - df["cnv_strength_subject_mean"].mean()
 )
 
-# Main model
+
+
+
+
+
+
 model = smf.mixedlm(
-    formula=(
-        "log_rt ~ cnv_strength_c "
-        "+ cnv_strength_subject_mean_c "
-        "+ difficulty_label "
-        "+ flip"
-    ),
+    "rt ~ difficulty_label + flip + cnv_strength_c + cnv_strength_subject_mean_c",
     data=df,
-    groups=df["subject"],
-    re_formula="1",
+    groups="subject",
 )
 
 fit = model.fit(
-    method="lbfgs",
+    method="powell",
     reml=False,
-    maxiter=1000,
 )
 
 print(fit.summary())
 
 
+
+# Base model: task predictors only
+m0 = smf.mixedlm(
+    "rt ~ difficulty_label + flip",
+    data=df,
+    groups="subject",
+)
+
+m0_fit = m0.fit(
+    method="powell",
+    reml=False,
+    maxiter=1000,
+)
+
+# Neural model: task predictors + CNV
+m1 = smf.mixedlm(
+    "rt ~ difficulty_label + flip "
+    "+ cnv_strength_c + cnv_strength_subject_mean_c",
+    data=df,
+    groups="subject",
+)
+
+m1_fit = m1.fit(
+    method="powell",
+    reml=False,
+    maxiter=1000,
+)
+
+print(m0_fit.summary())
+print(m1_fit.summary())
+
+# Model comparison
+lr_stat = 2 * (m1_fit.llf - m0_fit.llf)
+df_diff = m1_fit.df_modelwc - m0_fit.df_modelwc
+p_value = stats.chi2.sf(lr_stat, df_diff)
+
+print("\nModel comparison")
+print("----------------")
+print(f"M0 AIC: {m0_fit.aic:.2f}")
+print(f"M1 AIC: {m1_fit.aic:.2f}")
+print(f"ΔAIC:  {m1_fit.aic - m0_fit.aic:.2f}")
+
+print(f"M0 BIC: {m0_fit.bic:.2f}")
+print(f"M1 BIC: {m1_fit.bic:.2f}")
+print(f"ΔBIC:  {m1_fit.bic - m0_fit.bic:.2f}")
+
+print(f"LR χ²({df_diff}) = {lr_stat:.2f}, p = {p_value:.4g}")

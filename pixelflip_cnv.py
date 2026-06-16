@@ -262,6 +262,15 @@ def plot_erp_cluster(
     line_width=2.5,
     target_onset=1.2,
     colorbar=True,
+    fig=None,
+    outer_spec=None,
+    panel_title=None,
+    show_suptitle=True,
+    show_erp_title=True,
+    line_colors=None,
+    topo_vmax=None,
+    erp_ylim=None,
+    show_legend=False,
 ):
 
     effect = res["effect"]
@@ -273,7 +282,10 @@ def plot_erp_cluster(
     cluster_mask = res["clusters"][cluster_idx]
 
     if cluster_p >= alpha:
-        print(f"Warning: selected cluster is not significant, p = {cluster_p:.4f}")
+        print(
+            f"Warning: selected cluster is not significant, "
+            f"p = {cluster_p:.4f}"
+        )
 
     t_inds, ch_inds = np.where(cluster_mask)
     cluster_times = times[np.unique(t_inds)]
@@ -316,8 +328,8 @@ def plot_erp_cluster(
                 axis=0,
             )
 
-            cond_a_label = "Easy"
-            cond_b_label = "Hard"
+            cond_a_label = "easy"
+            cond_b_label = "hard"
 
         elif effect == "flip":
 
@@ -409,33 +421,52 @@ def plot_erp_cluster(
     topo_mask = np.zeros(len(ch_names), dtype=bool)
     topo_mask[cluster_chs] = True
 
-    cm = plt.get_cmap(cmap)
+    if line_colors is None:
+        color_a = "#1b9e77"
+        color_b = "#d81b60"
+    else:
+        color_a, color_b = line_colors
 
-    color_a = cm(0.15)
-    color_b = cm(0.85)
-
-    vmax = np.max(np.abs([topo_a, topo_b]))
+    if topo_vmax is None:
+        vmax = np.max(np.abs([topo_a, topo_b]))
+    else:
+        vmax = topo_vmax
+    
     vmax = vmax if vmax > 0 else 1e-12
 
     # --------------------------------------------------
     # Layout
     # --------------------------------------------------
 
-    fig = plt.figure(figsize=figsize)
+    standalone = fig is None or outer_spec is None
 
-    gs = gridspec.GridSpec(
-        2,
-        3,
-        width_ratios=[1, 1, 0.05],
-        height_ratios=[1, 1.15],
-        wspace=0.15,
-        hspace=0.20,
-    )
+    if standalone:
+        fig = plt.figure(figsize=figsize)
+
+        gs = gridspec.GridSpec(
+            2,
+            3,
+            figure=fig,
+            width_ratios=[1, 1, 0.05],
+            height_ratios=[1, 1.15],
+            wspace=0.15,
+            hspace=0.20,
+        )
+
+    else:
+        gs = gridspec.GridSpecFromSubplotSpec(
+            2,
+            3,
+            subplot_spec=outer_spec,
+            width_ratios=[1, 1, 0.06],
+            height_ratios=[1, 1.15],
+            wspace=0.12,
+            hspace=0.22,
+        )
 
     ax1 = fig.add_subplot(gs[0, 0])
     ax2 = fig.add_subplot(gs[0, 1])
     cax = fig.add_subplot(gs[0, 2])
-
     ax3 = fig.add_subplot(gs[1, :2])
 
     # --------------------------------------------------
@@ -462,7 +493,7 @@ def plot_erp_cluster(
         contours=0,
     )
 
-    ax1.set_title(cond_a_label, fontsize=18)
+    ax1.set_title(cond_a_label, fontsize=16)
 
     im2, _ = mne.viz.plot_topomap(
         topo_b,
@@ -476,10 +507,9 @@ def plot_erp_cluster(
         contours=0,
     )
 
-    ax2.set_title(cond_b_label, fontsize=18)
+    ax2.set_title(cond_b_label, fontsize=16)
 
     if colorbar:
-
         cbar = fig.colorbar(
             im2,
             cax=cax,
@@ -487,7 +517,7 @@ def plot_erp_cluster(
 
         cbar.set_label(
             "Amplitude (µV)",
-            fontsize=14,
+            fontsize=12,
         )
 
     else:
@@ -554,28 +584,44 @@ def plot_erp_cluster(
 
     ax3.set_xlabel("Time (s)")
     ax3.set_ylabel("Amplitude (µV)")
-    ax3.set_title("ERP over cluster electrodes")
-    ax3.legend(frameon=False)
+    
+    if erp_ylim is not None:
+        ax3.set_ylim(erp_ylim)
+
+    if show_erp_title:
+        ax3.set_title("ERP over cluster electrodes")
+
+    if show_legend:
+        ax3.legend(frameon=False)
 
     # --------------------------------------------------
     # Title
     # --------------------------------------------------
 
-    # fig.suptitle(
-    #     f"{effect.capitalize()} effect: "
-    #     f"p = {cluster_p:.4f}, "
-    #     f"{tmin_clu:.3f}–{tmax_clu:.3f} s",
-    #     fontsize=18,
-    #     y=0.98,
-    # )
-    
-    fig.suptitle(
-        f"{effect.capitalize()} effect "
+    if panel_title is None:
+        panel_title = f"{effect.capitalize()} effect"
+
+    title_text = (
+        f"{panel_title} "
         f"(p = {cluster_p:.3f})\n"
         f"{tmin_clu:.3f}–{tmax_clu:.3f} s"
     )
 
-    fig.subplots_adjust(top=0.90)
+    if standalone and show_suptitle:
+        fig.suptitle(title_text)
+        fig.subplots_adjust(top=0.90)
+
+    elif not standalone:
+        # Put title above the two topomaps inside this panel
+        ax1.text(
+            1.1,
+            1.25,
+            title_text,
+            transform=ax1.transAxes,
+            ha="center",
+            va="bottom",
+            fontsize=14,
+        )
 
     return fig
 
@@ -691,24 +737,24 @@ erp_df["flip"] = (
     .str.split("_")
     .str[1]
     .map({
-        "00": "Stable",
-        "10": "Volatile",
-        "11": "Post-Flip",
+        "00": "contingent",
+        "10": "non-contingent",
+        "11": "post-flip",
     })
 )
 
 erp_df["flip"] = pd.Categorical(
     erp_df["flip"],
-    categories=["Stable", "Volatile", "Post-Flip"],
+    categories=["contingent", "non-contingent", "post-flip"],
     ordered=True,
 )
 
 df_state = erp_df[
-    erp_df["flip"].isin(["Stable", "Volatile"])
+    erp_df["flip"].isin(["contingent", "non-contingent"])
 ].copy()
 
 df_sequence = erp_df[
-    erp_df["flip"].isin(["Volatile", "Post-Flip"])
+    erp_df["flip"].isin(["non-contingent", "post-flip"])
 ].copy()
 
 res_global_difficulty = run_global_difficulty_cluster_test(
@@ -767,28 +813,59 @@ results = {
 
 alpha = 0.05
 
-for name, (res, df) in results.items():
+best_diff_cluster = np.where(
+    res_global_difficulty["cluster_p_values"] < alpha
+)[0][0]
 
-    sig_clusters = np.where(res["cluster_p_values"] < alpha)[0]
+best_state_cluster = np.where(
+    res_state_flip["cluster_p_values"] < alpha
+)[0][0]
 
-    if len(sig_clusters) == 0:
-        print(f"{name}: no significant clusters")
-        continue
+# Use one common topomap scale
+shared_topo_vmax = 2.5
 
-    best_cluster = sig_clusters[
-        np.argmin(res["cluster_p_values"][sig_clusters])
-    ]
+fig = plt.figure(figsize=(16, 7))
 
-    print(
-        f"{name}: plotting cluster {best_cluster}, "
-        f"p = {res['cluster_p_values'][best_cluster]:.4f}"
-    )
+outer = gridspec.GridSpec(
+    1,
+    2,
+    figure=fig,
+    wspace=0.20,
+)
 
-    fig = plot_erp_cluster(
-        res=res,
-        df=df,
-        info=eeg_epochs.info,
-        cluster_idx=best_cluster,
-    )
+plot_erp_cluster(
+    res=res_global_difficulty,
+    df=erp_df,
+    info=eeg_epochs.info,
+    cluster_idx=best_diff_cluster,
+    fig=fig,
+    outer_spec=outer[0],
+    panel_title="Difficulty effect",
+    colorbar=False,
+    show_erp_title=False,
+    show_legend=True,
+    topo_vmax=shared_topo_vmax,
+    erp_ylim=(-1.7, 0.4),
+)
 
-    plt.show()
+plot_erp_cluster(
+    res=res_state_flip,
+    df=df_state,
+    info=eeg_epochs.info,
+    cluster_idx=best_state_cluster,
+    fig=fig,
+    outer_spec=outer[1],
+    panel_title="Contingency effect",
+    colorbar=True,
+    show_erp_title=False,
+    show_legend=True,
+    topo_vmax=shared_topo_vmax,
+    erp_ylim=(-1.7, 0.4),
+)
+
+plt.savefig(
+    "erp_difficulty_contingency.pdf",
+    bbox_inches="tight",
+)
+
+plt.show()
