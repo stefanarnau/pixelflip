@@ -1,7 +1,7 @@
 clear all;
 
 % Path variables
-PATH_EEGLAB      = '/home/plkn/eeglab2023.1/';
+PATH_EEGLAB      = '/home/plkn/eeglab2025.0.0/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 PATH_ERP_RESULTS  = '/mnt/data_dump/pixelflip/5_erp_results/';
 
@@ -26,6 +26,7 @@ for s = 1 : length(subject_list)
 
     % Load subject data. EEG data has dimensionality channels x times x trials
     EEG = pop_loadset('filename',    [subject, '_cleaned_cue_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
+    EEG_FB = pop_loadset('filename',    [subject, '_cleaned_feedback_erp.set'], 'filepath', PATH_AUTOCLEANED, 'loadmode', 'info');
 
     % Create below:
     % 12: Previous accuracy (-1 if previous trial in different block or previous trial not available or if previous trial response is missing)
@@ -59,7 +60,36 @@ for s = 1 : length(subject_list)
         end
     end
 
+    % Loop epochs
+    for e = 1 : size(EEG_FB.trialinfo, 1)
+
+        % Check in previous trial if available
+        if sum(EEG_FB.trialinfo(:, 1) == EEG_FB.trialinfo(e, 1) - 1) > 0 
+
+            % Get index of previous trial
+            idx_prev = find(EEG_FB.trialinfo(:, 1) == EEG_FB.trialinfo(e, 1) - 1);
+
+            % Check if different blocks
+            if EEG_FB.trialinfo(e, 2) ~= EEG_FB.trialinfo(idx_prev, 2)
+                EEG_FB.trialinfo(e, 12) = -1;
+                EEG_FB.trialinfo(e, 13) = -1;
+                continue;
+            end
+
+            % Set previous accuracy
+            EEG_FB.trialinfo(e, 12) = EEG_FB.trialinfo(idx_prev, 11);
+
+            % Set previous flipped
+            EEG_FB.trialinfo(e, 13) = EEG_FB.trialinfo(idx_prev, 5);
+
+        else
+            EEG_FB.trialinfo(e, 12) = -1;
+            EEG_FB.trialinfo(e, 13) = -1;
+        end
+    end
+
     trialinfo = EEG.trialinfo;
+    trialinfo_fb = EEG_FB.trialinfo;
 
     % Trialinfo columns:
     % 01: trial_nr
@@ -81,6 +111,12 @@ for s = 1 : length(subject_list)
                                                                'key_pressed', 'rt', 'color_pressed', 'feedback_accuracy', 'feedback_color', ...
                                                                'accuracy', 'prev_accuracy', 'prev_flipped'});
     writetable(trialinfo_table, [PATH_AUTOCLEANED, subject, '_erp_trialinfo.csv']);
+
+    % Convert trialinfo to table
+    trialinfo_table_fb = array2table(trialinfo_fb, 'VariableNames', {'trial_nr', 'block_nr', 'reliability', 'difficulty', 'flipped', ...
+                                                               'key_pressed', 'rt', 'color_pressed', 'feedback_accuracy', 'feedback_color', ...
+                                                               'accuracy', 'prev_accuracy', 'prev_flipped'});
+    writetable(trialinfo_table_fb, [PATH_AUTOCLEANED, subject, '_erp_trialinfo_feedback.csv']);
 
 
 end
