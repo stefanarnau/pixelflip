@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 from scipy import stats
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.lines import Line2D
 
 # Paths
 path_in = "/mnt/data_dump/pixelflip/2_cleaned/"
@@ -71,9 +73,6 @@ for dataset in datasets:
         .mean(axis=(1, 2))
     )
 
-    # Larger value = stronger CNV negativity
-    trial_cnv_strength = -trial_cnv
-
     trialinfo = trialinfo.copy()
     trialinfo["subject"] = subject_id
     trialinfo["trial_idx"] = np.arange(len(trialinfo))
@@ -104,7 +103,6 @@ for dataset in datasets:
     ] = "post-flip"
 
     trialinfo["cnv_value"] = trial_cnv
-    trialinfo["cnv_strength"] = trial_cnv_strength
 
     keep = (
         (trialinfo["prev_accuracy"] == 1)
@@ -131,7 +129,7 @@ df = trial_cnv_df.copy()
 
 df = df[
     df["rt"].notna()
-    & df["cnv_strength"].notna()
+    & df["cnv_value"].notna()
     & df["difficulty_label"].notna()
     & df["flip"].notna()
 ].copy()
@@ -149,19 +147,19 @@ df["flip"] = pd.Categorical(
 )
 
 # Within-subject CNV centering
-df["cnv_strength_c"] = (
-    df["cnv_strength"]
-    - df.groupby("subject")["cnv_strength"].transform("mean")
+df["cnv_value_c"] = (
+    df["cnv_value"]
+    - df.groupby("subject")["cnv_value"].transform("mean")
 )
 
 # Between-subject CNV term
-df["cnv_strength_subject_mean"] = (
-    df.groupby("subject")["cnv_strength"].transform("mean")
+df["cnv_value_subject_mean"] = (
+    df.groupby("subject")["cnv_value"].transform("mean")
 )
 
-df["cnv_strength_subject_mean_c"] = (
-    df["cnv_strength_subject_mean"]
-    - df["cnv_strength_subject_mean"].mean()
+df["cnv_value_subject_mean_c"] = (
+    df["cnv_value_subject_mean"]
+    - df["cnv_value_subject_mean"].mean()
 )
 
 
@@ -169,9 +167,10 @@ df["cnv_strength_subject_mean_c"] = (
 # 1. Does flip explain RT beyond CNV?
 # ======================================================================================
 
+# Model with cnv and flip condition
 m_cnv = smf.mixedlm(
     "rt ~ difficulty_label + flip "
-    "+ cnv_strength_c + cnv_strength_subject_mean_c",
+    "+ cnv_value_c + cnv_value_subject_mean_c",
     data=df,
     groups="subject",
 ).fit(
@@ -182,10 +181,10 @@ m_cnv = smf.mixedlm(
 
 print(m_cnv.summary())
 
-
+# Model with only cnv
 m_cnv_only = smf.mixedlm(
     "rt ~ difficulty_label "
-    "+ cnv_strength_c + cnv_strength_subject_mean_c",
+    "+ cnv_value_c + cnv_value_subject_mean_c",
     data=df,
     groups="subject",
 ).fit(
@@ -196,7 +195,7 @@ m_cnv_only = smf.mixedlm(
 
 print(m_cnv_only.summary())
 
-
+# Comparison of model fit
 lr_stat = 2 * (m_cnv.llf - m_cnv_only.llf)
 
 df_diff = (
@@ -223,8 +222,8 @@ print(f"ΔAIC        : {m_cnv.aic - m_cnv_only.aic:.2f}")
 # ======================================================================================
 
 m_cnv_int = smf.mixedlm(
-    "rt ~ difficulty_label + flip * cnv_strength_c "
-    "+ cnv_strength_subject_mean_c",
+    "rt ~ difficulty_label + flip * cnv_value_c "
+    "+ cnv_value_subject_mean_c",
     data=df,
     groups="subject",
 ).fit(
@@ -236,8 +235,8 @@ m_cnv_int = smf.mixedlm(
 print(m_cnv_int.summary())
 
 
-term_pf = "flip[T.post-flip]:cnv_strength_c"
-term_nc = "flip[T.non-contingent]:cnv_strength_c"
+term_pf = "flip[T.post-flip]:cnv_value_c"
+term_nc = "flip[T.non-contingent]:cnv_value_c"
 
 b = (
     m_cnv_int.params[term_pf]
@@ -269,241 +268,32 @@ print(f"b={b:.3f}, SE={se:.3f}, z={z:.3f}, p={p:.5f}")
 
 
 
-import pandas as pd
-import numpy as np
-from scipy.stats import linregress
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-rows = []
-
-for (subject, flip), subdf in df.groupby(
-    ["subject", "flip"],
-    observed=True,
-):
-
-    if len(subdf) < 20:
-        continue
-
-    slope, intercept, r, p, se = linregress(
-        subdf["cnv_strength_c"],
-        subdf["rt"],
-    )
-
-    rows.append({
-        "subject": subject,
-        "flip": flip,
-        "slope": slope,
-    })
-
-slope_df = pd.DataFrame(rows)
-
-plt.figure(figsize=(6,4))
-
-sns.boxplot(
-    data=slope_df,
-    x="flip",
-    y="slope",
-    showfliers=False,
-)
-
-sns.stripplot(
-    data=slope_df,
-    x="flip",
-    y="slope",
-    color="black",
-    alpha=.5,
-)
-
-plt.axhline(0, color="black", ls="--")
-plt.ylabel("CNV–RT slope")
-plt.xlabel("")
-plt.tight_layout()
-plt.show()
 
 
+# ======================================================================================
+# Settings
+# ======================================================================================
 
+difficulty_palette = {
+    "easy": "#1b9e77",
+    "hard": "#d81b60",
+}
 
-
-
-
-df_plot = df.copy()
-
-df_plot["cnv_bin"] = (
-    df_plot.groupby("subject")["cnv_strength_c"]
-    .transform(
-        lambda x: pd.qcut(
-            x,
-            q=5,
-            labels=False,
-            duplicates="drop",
-        )
-    )
-)
-
-summary = (
-    df_plot.groupby(
-        ["flip", "cnv_bin"],
-        observed=True,
-    )
-    .agg(
-        rt=("rt", "mean"),
-    )
-    .reset_index()
-)
-
-plt.figure(figsize=(6,4))
-
-sns.lineplot(
-    data=summary,
-    x="cnv_bin",
-    y="rt",
-    hue="flip",
-    marker="o",
-)
-
-plt.xlabel("CNV strength quintile")
-plt.ylabel("RT (ms)")
-plt.tight_layout()
-plt.show()
-
-
-
-
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-# CNV range
-cnv_range = np.linspace(
-    df["cnv_strength_c"].quantile(.01),
-    df["cnv_strength_c"].quantile(.99),
-    100,
-)
-
-# Prediction dataframe
-pred_df = pd.DataFrame()
-
-for flip in [
+flip_order = [
     "contingent",
     "non-contingent",
     "post-flip",
-]:
+]
 
-    tmp = pd.DataFrame({
-        "cnv_strength_c": cnv_range,
-        "flip": flip,
-        "difficulty_label": "easy",   # hold constant
-        "cnv_strength_subject_mean_c": 0,
-    })
-
-    tmp["pred_rt"] = m_cnv.predict(tmp)
-    pred_df = pd.concat([pred_df, tmp])
-
-# Plot
-plt.figure(figsize=(7,5))
-
-sns.lineplot(
-    data=pred_df,
-    x="cnv_strength_c",
-    y="pred_rt",
-    hue="flip",
-    linewidth=3,
-)
-
-plt.xlabel("Within-subject CNV strength (µV)")
-plt.ylabel("Predicted RT (ms)")
-plt.title("Predicted RT from mixed model")
-
-plt.tight_layout()
-plt.show()
-
-
-
-
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import pandas as pd
-import statsmodels.formula.api as smf
-
-palette = {
+flip_palette = {
     "contingent": "#1b9e77",
     "non-contingent": "#d81b60",
     "post-flip": "#7570b3",
 }
 
-flip_order = ["contingent", "non-contingent", "post-flip"]
-
 
 # ======================================================================================
-# 1. Main RT condition plot
-# ======================================================================================
-
-plot_rt = (
-    df.groupby(
-        ["subject", "difficulty_label", "flip"],
-        observed=True,
-        as_index=False,
-    )
-    .agg(
-        rt=("rt", "mean"),
-    )
-)
-
-fig, ax = plt.subplots(figsize=(5.5, 4))
-
-sns.pointplot(
-    data=plot_rt,
-    x="flip",
-    y="rt",
-    hue="difficulty_label",
-    errorbar=("ci", 95),
-    capsize=.1,
-    err_kws={"linewidth": 1.8},
-    dodge=0.25,
-    markers="o",
-    linestyles="-",
-    linewidth=2.5,
-    markersize=7,
-    palette={
-        "easy": "#1b9e77",
-        "hard": "#d81b60",
-    },
-    ax=ax,
-)
-
-sns.stripplot(
-    data=plot_rt,
-    x="flip",
-    y="rt",
-    hue="difficulty_label",
-    dodge=True,
-    jitter=0.08,
-    alpha=0.35,
-    size=3,
-    palette={
-        "easy": "#1b9e77",
-        "hard": "#d81b60",
-    },
-    ax=ax,
-)
-
-handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles[:2], ["easy", "hard"], frameon=False, title=None)
-
-ax.set_xlabel("")
-ax.set_ylabel("Response time (ms)")
-ax.set_title("Observed response time")
-sns.despine(ax=ax)
-plt.tight_layout()
-plt.show()
-
-
-# ======================================================================================
-# 2. CNV condition plot
+# Prepare CNV condition means
 # ======================================================================================
 
 plot_cnv = (
@@ -513,98 +303,54 @@ plot_cnv = (
         as_index=False,
     )
     .agg(
-        cnv_strength=("cnv_strength", "mean"),
+        cnv_value=("cnv_value", "mean"),
     )
 )
 
-fig, ax = plt.subplots(figsize=(5.5, 4))
-
-sns.pointplot(
-    data=plot_cnv,
-    x="flip",
-    y="cnv_strength",
-    hue="difficulty_label",
-    errorbar=("ci", 95),
-    capsize=.1,
-    err_kws={"linewidth": 1.8},
-    dodge=0.25,
-    markers="o",
-    linestyles="-",
-    linewidth=2.5,
-    markersize=7,
-    palette={
-        "easy": "#1b9e77",
-        "hard": "#d81b60",
-    },
-    ax=ax,
-)
-
-sns.stripplot(
-    data=plot_cnv,
-    x="flip",
-    y="cnv_strength",
-    hue="difficulty_label",
-    dodge=True,
-    jitter=0.08,
-    alpha=0.35,
-    size=3,
-    palette={
-        "easy": "#1b9e77",
-        "hard": "#d81b60",
-    },
-    ax=ax,
-)
-
-handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles[:2], ["easy", "hard"], frameon=False, title=None)
-
-ax.set_xlabel("")
-ax.set_ylabel("CNV strength (µV)")
-ax.set_title("CNV amplitude")
-sns.despine(ax=ax)
-plt.tight_layout()
-plt.show()
-
 
 # ======================================================================================
-# 3. Residualized RT vs CNV plot
+# Prepare residualized RT and model predictions
 # ======================================================================================
-# Residualize RT for difficulty and subject mean CNV, but keep flip effects visible.
-# This isolates the within-subject CNV relationship while preserving condition offsets.
 
 resid_model = smf.ols(
-    "rt ~ difficulty_label + cnv_strength_subject_mean_c",
+    "rt ~ difficulty_label + cnv_value_subject_mean_c",
     data=df,
 ).fit()
 
 df_resid = df.copy()
-df_resid["rt_resid"] = resid_model.resid + df["rt"].mean()
+df_resid["rt_resid"] = (
+    resid_model.resid
+    + df["rt"].mean()
+)
 
-# Model-predicted lines from interaction MLM
 cnv_range = np.linspace(
-    df_resid["cnv_strength_c"].quantile(.01),
-    df_resid["cnv_strength_c"].quantile(.99),
+    df_resid["cnv_value_c"].quantile(.01),
+    df_resid["cnv_value_c"].quantile(.99),
     100,
 )
 
 pred_rows = []
 
 for flip in flip_order:
+
     tmp = pd.DataFrame({
-        "cnv_strength_c": cnv_range,
+        "cnv_value_c": cnv_range,
         "flip": flip,
         "difficulty_label": "easy",
-        "cnv_strength_subject_mean_c": 0,
+        "cnv_value_subject_mean_c": 0,
     })
 
     tmp["pred_rt"] = m_cnv_int.predict(tmp)
+
     pred_rows.append(tmp)
 
-pred_df = pd.concat(pred_rows, ignore_index=True)
+pred_df = pd.concat(
+    pred_rows,
+    ignore_index=True,
+)
 
-# Optional: subject-level binning for readable points
 df_resid["cnv_bin"] = (
-    df_resid.groupby("subject")["cnv_strength_c"]
+    df_resid.groupby("subject")["cnv_value_c"]
     .transform(
         lambda x: pd.qcut(
             x,
@@ -622,21 +368,83 @@ bin_df = (
         as_index=False,
     )
     .agg(
-        cnv_strength_c=("cnv_strength_c", "mean"),
+        cnv_value_c=("cnv_value_c", "mean"),
         rt_resid=("rt_resid", "mean"),
     )
 )
 
-fig, ax = plt.subplots(figsize=(6, 4))
+
+# ======================================================================================
+# Figure
+# ======================================================================================
+
+fig, axes = plt.subplots(
+    1,
+    2,
+    figsize=(11, 4),
+)
+
+
+# --------------------------------------------------------------------------------------
+# Left panel: CNV amplitude
+# --------------------------------------------------------------------------------------
+
+ax = axes[0]
+
+sns.pointplot(
+    data=plot_cnv,
+    x="flip",
+    y="cnv_value",
+    hue="difficulty_label",
+    errorbar=("ci", 95),
+    capsize=.1,
+    err_kws={"linewidth": 1.8},
+    dodge=0.25,
+    markers="o",
+    linestyles="-",
+    linewidth=2.5,
+    markersize=7,
+    palette=difficulty_palette,
+    ax=ax,
+)
+
+sns.stripplot(
+    data=plot_cnv,
+    x="flip",
+    y="cnv_value",
+    hue="difficulty_label",
+    dodge=True,
+    jitter=0.08,
+    alpha=0.35,
+    size=3,
+    palette=difficulty_palette,
+    ax=ax,
+)
+
+if ax.legend_ is not None:
+    ax.legend_.remove()
+
+ax.set_xlabel("")
+ax.set_ylabel("CNV value (µV)")
+ax.set_title("CNV amplitude", pad=12)
+
+sns.despine(ax=ax)
+
+
+# --------------------------------------------------------------------------------------
+# Right panel: CNV–RT relationship
+# --------------------------------------------------------------------------------------
+
+ax = axes[1]
 
 sns.scatterplot(
     data=bin_df,
-    x="cnv_strength_c",
+    x="cnv_value_c",
     y="rt_resid",
     hue="flip",
     hue_order=flip_order,
-    palette=palette,
-    alpha=0.35,
+    palette=flip_palette,
+    alpha=0.25,
     s=25,
     edgecolor=None,
     ax=ax,
@@ -645,19 +453,83 @@ sns.scatterplot(
 
 sns.lineplot(
     data=pred_df,
-    x="cnv_strength_c",
+    x="cnv_value_c",
     y="pred_rt",
     hue="flip",
     hue_order=flip_order,
-    palette=palette,
+    palette=flip_palette,
     linewidth=2.8,
     ax=ax,
 )
 
-ax.set_xlabel("Within-subject CNV strength (µV)")
+if ax.legend_ is not None:
+    ax.legend_.remove()
+
+ax.set_xlabel("Within-subject CNV value (µV)")
 ax.set_ylabel("Residualized RT (ms)")
-ax.set_title("CNV–RT relationship")
+ax.set_title("CNV–RT relationship", pad=12)
 
 sns.despine(ax=ax)
-plt.tight_layout()
+
+
+# ======================================================================================
+# Legends
+# ======================================================================================
+
+difficulty_handles = [
+    Line2D(
+        [0],
+        [0],
+        color=difficulty_palette["easy"],
+        marker="o",
+        linewidth=2.5,
+        markersize=8,
+    ),
+    Line2D(
+        [0],
+        [0],
+        color=difficulty_palette["hard"],
+        marker="o",
+        linewidth=2.5,
+        markersize=8,
+    ),
+]
+
+fig.legend(
+    difficulty_handles,
+    ["easy", "hard"],
+    frameon=False,
+    ncol=2,
+    loc="upper center",
+    bbox_to_anchor=(0.23, 1.08),
+)
+
+flip_handles = [
+    Line2D(
+        [0],
+        [0],
+        color=flip_palette[flip],
+        linewidth=3,
+    )
+    for flip in flip_order
+]
+
+fig.legend(
+    flip_handles,
+    flip_order,
+    frameon=False,
+    ncol=3,
+    loc="upper center",
+    bbox_to_anchor=(0.73, 1.08),
+)
+
+
+# ======================================================================================
+# Layout
+# ======================================================================================
+
+plt.tight_layout(
+    rect=[0, 0, 1, 0.98],
+)
+
 plt.show()
