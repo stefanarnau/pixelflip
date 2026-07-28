@@ -3,13 +3,16 @@ clear all;
 % PATH VARS
 PATH_EEGLAB = '/home/plkn/eeglab2022.1/';
 PATH_RAW = '/mnt/data_dump/pixelflip/0_raw/';
-PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset/';
-PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
+PATH_ICSET = '/mnt/data_dump/pixelflip/1_icset_test/';
+PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned_test/';
 
 % Subject list (stating the obvious here...)
 subject_list = {'VP01', 'VP02', 'VP03', 'VP04', 'VP05', 'VP06', 'VP07', 'VP08', 'VP09', 'VP10',...
                 'VP11', 'VP12', 'VP13', 'VP14', 'VP15', 'VP16', 'VP17', 'VP18', 'VP19', 'VP20',...
                 'VP21', 'VP22', 'VP23', 'VP24', 'VP25', 'VP26', 'VP27', 'VP28', 'VP29', 'VP30',...
+                'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37', 'VP38', 'VP39', 'VP40'};
+
+subject_list = {'VP22', 'VP23', 'VP24', 'VP25', 'VP26', 'VP27', 'VP28', 'VP29', 'VP30',...
                 'VP31', 'VP32', 'VP33', 'VP34', 'VP35', 'VP36', 'VP37', 'VP38', 'VP39', 'VP40'};
 
 % Init eeglab
@@ -229,7 +232,7 @@ for s = 1 : length(subject_list)
     EEG_TF = iclabel(EEG_TF);
 
     % Find nobrainer
-    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+    EEG_TF.nobrainer = find(EEG_TF.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG_TF.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
 
     % Copy ICs to erpset
     EEG = pop_editset(EEG, 'icachansind', 'EEG_TF.icachansind', 'icaweights', 'EEG_TF.icaweights', 'icasphere', 'EEG_TF.icasphere');

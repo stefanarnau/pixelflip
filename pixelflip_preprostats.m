@@ -1,7 +1,7 @@
 clear all;
 
 % PATH VARS
-PATH_EEGLAB      = '/home/plkn/eeglab2022.1/';
+PATH_EEGLAB      = '/home/plkn/eeglab2025.0.0/';
 PATH_AUTOCLEANED = '/mnt/data_dump/pixelflip/2_cleaned/';
 
 % Subject list
@@ -44,4 +44,5 @@ for s = 1 : length(subject_list)
 
 end
 
-
+mean(prepro_cue_erp, 1)
+std(prepro_cue_erp, [], 1)
