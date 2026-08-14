@@ -92,6 +92,11 @@ The script examines:
 
 The script also generates the manuscript figure showing condition-related CNV amplitudes and the trial-level relationship between CNV amplitude and response time.
 
+
+### `pixelflip_09_post_hoc_sensitivity_analysis.py`
+
+Performs a post-hoc sensitivity analysis for RT effects.
+
 ### `environment.yml`
 
 Conda environment specification for the Python analyses.
