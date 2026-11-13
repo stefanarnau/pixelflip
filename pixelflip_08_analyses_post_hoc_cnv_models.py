@@ -523,7 +523,20 @@ fig.legend(
     bbox_to_anchor=(0.73, 1.08),
 )
 
-
+# Panel labels
+for ax, label in zip(axes, ["A", "B"]):
+    txt = ax.text(
+        -0.10, 1.17,
+        label,
+        transform=ax.transAxes,
+        fontsize=15,
+        fontweight="bold",
+        ha="left",
+        va="bottom",
+        clip_on=False,
+    )
+    txt.set_in_layout(False)
+    
 # ======================================================================================
 # Layout
 # ======================================================================================

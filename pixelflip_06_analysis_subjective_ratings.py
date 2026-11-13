@@ -369,5 +369,18 @@ for ax, (title, accu_col, flip_col) in zip(axes, rating_specs):
 axes[0].set_ylabel("rating (mm)")
 axes[0].set_ylim(0, 105)
 
+# Panel labels
+for ax, label in zip(axes, ["A", "B", "C"]):
+    ax.text(
+        -0.10, 1.06,
+        label,
+        transform=ax.transAxes,
+        fontsize=15,
+        fontweight="bold",
+        ha="left",
+        va="bottom",
+        clip_on=False,
+    )
+
 plt.tight_layout()
 plt.show()

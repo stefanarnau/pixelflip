@@ -309,18 +309,31 @@ plot_behavior_measure(
     ylim=(40, 100),
 )
 
-# Panel labels
+# Panel titles
 axes[0].set_title("Response time")
 axes[1].set_title("Accuracy")
 
+# Panel labels
+for ax, label in zip(axes, ["A", "B"]):
+    ax.text(
+        -0.10, 1.06,
+        label,
+        transform=ax.transAxes,
+        fontsize=15,
+        fontweight="bold",
+        ha="left",
+        va="bottom",
+        clip_on=False,
+    )
+
 # Shared legend
-fig.legend(
+axes[0].legend(
     handles,
     ["Easy", "Hard"],
+    loc="upper right",
     frameon=False,
     ncol=2,
-    loc="upper center",
-    bbox_to_anchor=(0.5, 1.02),
+    fontsize=11,
 )
 
 plt.tight_layout()

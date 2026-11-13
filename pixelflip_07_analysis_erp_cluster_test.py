@@ -863,6 +863,20 @@ plot_erp_cluster(
     erp_ylim=(-1.7, 0.4),
 )
 
+# Panel labels
+for spec, label in zip(outer, ["A", "B"]):
+    pos = spec.get_position(fig)
+
+    fig.text(
+        pos.x0 - 0.025,
+        pos.y1 + 0.11,
+        label,
+        fontsize=16,
+        fontweight="bold",
+        ha="left",
+        va="bottom",
+    )
+    
 plt.savefig(
     "erp_difficulty_contingency.pdf",
     bbox_inches="tight",
